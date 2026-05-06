@@ -252,28 +252,6 @@ function normalizeDiagnosticsPackages(body) {
   return out;
 }
 
-function sanitizePaymentMeta(meta) {
-  if (!meta || typeof meta !== "object") return null;
-  const method = String(meta.method || "").trim().toLowerCase();
-  if (method === "upi") {
-    const upi = String(meta.upi_id || "").trim();
-    if (!upi) return { method: "upi" };
-    const [left, right] = upi.split("@");
-    const masked = left ? `${left.slice(0, 2)}***@${right || "upi"}` : "upi";
-    return { method: "upi", upi_masked: masked };
-  }
-  if (method === "card") {
-    const last4 = String(meta.card_last4 || "").replace(/\D/g, "").slice(-4);
-    return {
-      method: "card",
-      card_last4: last4 || "****",
-      card_network: String(meta.card_network || "CARD").slice(0, 16),
-      card_holder_name: String(meta.card_holder_name || "").slice(0, 80),
-    };
-  }
-  return { method: "unknown" };
-}
-
 async function createDiagnosticReminder({ client, userId, orderId, packageName, scheduledFor }) {
   const now = Date.now();
   const at = new Date(scheduledFor).getTime();
@@ -391,7 +369,7 @@ router.post("/", async (req, res) => {
       });
     }
     if (!isRazorpayConfigured()) {
-      return res.status(400).json({ error: "Razorpay is not configured — choose Cash on delivery." });
+      return res.status(400).json({ error: "Razorpay is not configured - choose Cash on delivery." });
     }
     try {
       await assertCapturedDiagnosticsPayment({
@@ -625,10 +603,7 @@ router.post("/diagnostics", async (req, res) => {
         error: "Prepaid requires Razorpay checkout: send razorpay_order_id, razorpay_payment_id, and razorpay_signature after payment.",
       });
     } else {
-      paymentMeta = sanitizePaymentMeta(req.body?.payment_meta);
-      if (!paymentMeta) {
-        return res.status(400).json({ error: "payment_meta is required for prepaid booking (or configure Razorpay)" });
-      }
+      return res.status(400).json({ error: "Razorpay is not configured - choose Cash on delivery." });
     }
   }
 

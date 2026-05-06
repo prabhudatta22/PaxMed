@@ -4,8 +4,12 @@ import { randomSessionId } from "../auth/phone.js";
 
 const router = Router();
 
-function loadTestToken() {
-  return String(process.env.LOAD_TEST_TOKEN || "").trim();
+function loadTestToken(env = process.env) {
+  return String(env.LOAD_TEST_TOKEN || "").trim();
+}
+
+export function isLoadTestRouteEnabled(env = process.env) {
+  return Boolean(loadTestToken(env) && env.NODE_ENV !== "production");
 }
 
 /**
@@ -14,6 +18,9 @@ function loadTestToken() {
  * POST /api/load-test/session  body: { token, user_index }  user_index: 1 .. 9_999_999
  */
 router.post("/load-test/session", async (req, res) => {
+  if (!isLoadTestRouteEnabled()) {
+    return res.status(404).json({ error: "Not found" });
+  }
   const expected = loadTestToken();
   if (!expected) {
     return res.status(404).json({ error: "Not found" });

@@ -19,7 +19,7 @@ import diagnosticReportsRoutes from "./routes/diagnosticReports.js";
 import paymentsRazorpayRoutes from "./routes/paymentsRazorpay.js";
 import razorpayWebhook from "./routes/razorpayWebhook.js";
 import diagnosticsWebhook from "./routes/diagnosticsWebhook.js";
-import loadTestRoutes from "./routes/loadTest.js";
+import loadTestRoutes, { isLoadTestRouteEnabled } from "./routes/loadTest.js";
 import cookieParser from "cookie-parser";
 import { attachUser } from "./auth/middleware.js";
 
@@ -44,13 +44,7 @@ app.use(express.json({ limit: "2mb" }));
 app.use(cookieParser());
 app.use(attachUser);
 
-const loadTok = String(process.env.LOAD_TEST_TOKEN || "").trim();
-if (loadTok) {
-  if (process.env.NODE_ENV === "production") {
-    console.warn(
-      "MedLens: LOAD_TEST_TOKEN is set — POST /api/load-test/session can mint arbitrary consumer sessions; remove after load testing."
-    );
-  }
+if (isLoadTestRouteEnabled()) {
   app.use("/api", loadTestRoutes);
 }
 
