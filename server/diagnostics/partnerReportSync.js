@@ -14,6 +14,7 @@ import { ensureDiagnosticReportsSchema } from "./reportSchema.js";
 import {
   allowedDiagnosticReportMime,
   deleteDiagnosticReportBlob,
+  maxDiagnosticReportBytes,
   persistDiagnosticReportFile,
 } from "./reportStorage.js";
 
@@ -157,6 +158,34 @@ function sniffMime(buf) {
 /**
  * Fetch a partner-signed HTTPS URL (no auth cookie).
  */
+async function readResponseBodyWithLimit(res, maxBytes) {
+  const reader = res.body?.getReader?.();
+  if (!reader) {
+    const buf = Buffer.from(await res.arrayBuffer());
+    if (buf.length > maxBytes) throw new Error(`Report body too large (max ${maxBytes} bytes)`);
+    return buf;
+  }
+
+  const chunks = [];
+  let total = 0;
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const chunk = Buffer.from(value);
+      total += chunk.length;
+      if (total > maxBytes) {
+        await reader.cancel().catch(() => {});
+        throw new Error(`Report body too large (max ${maxBytes} bytes)`);
+      }
+      chunks.push(chunk);
+    }
+  } finally {
+    reader.releaseLock?.();
+  }
+  return Buffer.concat(chunks, total);
+}
+
 export async function fetchReportFromUrl(reportUrl, { timeoutMs = 55000 } = {}) {
   const u = String(reportUrl || "").trim();
   if (!u.startsWith("https://")) {
@@ -174,7 +203,12 @@ export async function fetchReportFromUrl(reportUrl, { timeoutMs = 55000 } = {}) 
     if (!res.ok) throw new Error(`Report download failed (${res.status})`);
     const hdrMime = res.headers.get("content-type");
     const mime = allowedDiagnosticReportMime(hdrMime);
-    const buf = Buffer.from(await res.arrayBuffer());
+    const maxBytes = maxDiagnosticReportBytes();
+    const contentLength = Number(res.headers.get("content-length") || "");
+    if (Number.isFinite(contentLength) && contentLength > maxBytes) {
+      throw new Error(`Report body too large (max ${maxBytes} bytes)`);
+    }
+    const buf = await readResponseBodyWithLimit(res, maxBytes);
     if (!buf.length) throw new Error("Empty report body");
     return { buffer: buf, mimeHint: mime || hdrMime, finalUrl: res.url };
   } finally {
