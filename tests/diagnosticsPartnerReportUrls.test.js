@@ -33,7 +33,7 @@ test("fetchReportFromUrl rejects oversized content-length before buffering", asy
   const originalFetch = globalThis.fetch;
   const originalMax = process.env.DIAGNOSTIC_REPORT_MAX_BYTES;
   process.env.DIAGNOSTIC_REPORT_MAX_BYTES = "2048";
-  let bodyRead = false;
+  let readerRequested = false;
   globalThis.fetch = async () => ({
     ok: true,
     url: "https://cdn.example.com/report.pdf",
@@ -45,13 +45,16 @@ test("fetchReportFromUrl rejects oversized content-length before buffering", asy
         return null;
       },
     },
-    body: new ReadableStream({
-      pull(controller) {
-        bodyRead = true;
-        controller.enqueue(new Uint8Array([0x25, 0x50, 0x44, 0x46]));
-        controller.close();
+    body: {
+      getReader() {
+        readerRequested = true;
+        return {
+          read: async () => ({ done: true }),
+          cancel: async () => {},
+          releaseLock: () => {},
+        };
       },
-    }),
+    },
   });
 
   try {
@@ -59,7 +62,7 @@ test("fetchReportFromUrl rejects oversized content-length before buffering", asy
       () => fetchReportFromUrl("https://cdn.example.com/report.pdf", { timeoutMs: 1000 }),
       /Report body too large/
     );
-    assert.equal(bodyRead, false);
+    assert.equal(readerRequested, false);
   } finally {
     globalThis.fetch = originalFetch;
     if (originalMax == null) delete process.env.DIAGNOSTIC_REPORT_MAX_BYTES;
