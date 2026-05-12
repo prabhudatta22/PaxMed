@@ -353,6 +353,38 @@ async function maybeNotifyWhatsapp({ userPhoneE164, text }) {
   await sendTextMessage({ toWaId: wa, text }).catch(() => {});
 }
 
+async function rollbackAndRelease(client) {
+  if (!client) return;
+  try {
+    await client.query("ROLLBACK");
+  } catch {
+    // best-effort cleanup before releasing the connection
+  } finally {
+    client.release();
+  }
+}
+
+export async function beginRazorpayPaymentOrderGuard(client, razorpayPaymentId) {
+  const paymentId = String(razorpayPaymentId || "").trim();
+  if (!paymentId) return { guarded: false, duplicate: false };
+
+  await client.query("BEGIN");
+  try {
+    await client.query("SELECT pg_advisory_xact_lock(220582, hashtext($1::text))", [paymentId]);
+    const dup = await client.query(`SELECT id FROM orders WHERE razorpay_payment_id = $1 LIMIT 1`, [
+      paymentId,
+    ]);
+    if (dup.rows.length) {
+      await client.query("ROLLBACK");
+      return { guarded: true, duplicate: true, orderId: dup.rows[0].id };
+    }
+    return { guarded: true, duplicate: false };
+  } catch (e) {
+    await client.query("ROLLBACK").catch(() => {});
+    throw e;
+  }
+}
+
 router.post("/", async (req, res) => {
   await ensureOrdersSchema();
   const userId = req.user.id;
@@ -675,14 +707,6 @@ router.post("/diagnostics", async (req, res) => {
   const rzPaymentDupCheck = paymentMeta?.razorpay_payment_id
     ? String(paymentMeta.razorpay_payment_id).trim()
     : "";
-  if (rzPaymentDupCheck) {
-    const dup = await pool.query(`SELECT id FROM orders WHERE razorpay_payment_id = $1 LIMIT 1`, [
-      rzPaymentDupCheck,
-    ]);
-    if (dup.rows.length) {
-      return res.status(409).json({ error: "This Razorpay payment is already linked to an order." });
-    }
-  }
 
   const address = await loadBookingAddress({
     userId,
@@ -717,6 +741,23 @@ router.post("/diagnostics", async (req, res) => {
     diagPrescriptionId = await resolvePrescriptionId(pool, userId, req.body);
   } catch (e) {
     return res.status(400).json({ error: e?.message || "Invalid prescription" });
+  }
+
+  let guardedClient = null;
+  if (rzPaymentDupCheck) {
+    guardedClient = await pool.connect();
+    try {
+      const guard = await beginRazorpayPaymentOrderGuard(guardedClient, rzPaymentDupCheck);
+      if (guard.duplicate) {
+        guardedClient.release();
+        guardedClient = null;
+        return res.status(409).json({ error: "This Razorpay payment is already linked to an order." });
+      }
+    } catch (e) {
+      guardedClient.release();
+      guardedClient = null;
+      return res.status(500).json({ error: e?.message || "Failed to reserve payment for booking" });
+    }
   }
 
   let providerBooking;
@@ -754,6 +795,8 @@ router.post("/diagnostics", async (req, res) => {
         preferredDate: requestedSchedule.toISOString(),
       });
     } catch (e) {
+      await rollbackAndRelease(guardedClient);
+      guardedClient = null;
       return res.status(502).json({ error: e?.message || "Diagnostics partner booking failed" });
     }
   } else {
@@ -782,9 +825,10 @@ router.post("/diagnostics", async (req, res) => {
         : {},
   };
 
-  const client = await pool.connect();
+  const client = guardedClient || (await pool.connect());
+  const transactionAlreadyOpen = Boolean(guardedClient);
   try {
-    await client.query("BEGIN");
+    if (!transactionAlreadyOpen) await client.query("BEGIN");
     const scheduledIso = requestedSchedule.toISOString();
     const rzOrderId = paymentMeta?.razorpay_order_id ? String(paymentMeta.razorpay_order_id) : null;
     const rzPaymentId = paymentMeta?.razorpay_payment_id ? String(paymentMeta.razorpay_payment_id) : null;
