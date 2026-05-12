@@ -138,7 +138,7 @@ class CartLine {
 }
 
 class CartState extends ChangeNotifier {
-  static const _kKey = 'medlens_flutter_cart_v1';
+  static const _kKey = 'paxmed_flutter_cart_v1';
   final List<CartLine> _items = [];
 
   List<CartLine> get items => List.unmodifiable(_items);

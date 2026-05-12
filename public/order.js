@@ -1,7 +1,7 @@
 import { fetchAndCacheUser, loadCachedUser } from "./authProfile.js";
 
 const $ = (id) => document.getElementById(id);
-const ORDER_SUCCESS_KEY = "medlens_order_success_message_v1";
+const ORDER_SUCCESS_KEY = "paxmed_order_success_message_v1";
 
 function escapeHtml(s) {
   return String(s)
@@ -109,13 +109,14 @@ async function load() {
 
   const payRef = $("orderPaymentRef");
   if (payRef) {
-    if (o.razorpay_payment_id || o.razorpay_order_id) {
+    const hasRz = Boolean(o.razorpay_payment_id || o.razorpay_order_id);
+    if (hasRz) {
       payRef.classList.remove("hidden");
       payRef.innerHTML = `
         <div class="rx-match" style="justify-content: flex-start">
           <div>
             <div class="rx-match-title">Prepaid · Razorpay</div>
-            <div class="rx-match-sub muted">MedLens order <strong>#${escapeHtml(String(o.id))}</strong></div>
+            <div class="rx-match-sub muted">PaxMed order <strong>#${escapeHtml(String(o.id))}</strong></div>
             <div class="rx-match-sub muted" style="margin-top: 0.35rem">Transaction ID: <code>${escapeHtml(
               String(o.razorpay_payment_id || "—")
             )}</code></div>
@@ -123,8 +124,50 @@ async function load() {
           </div>
         </div>`;
     } else {
-      payRef.classList.add("hidden");
-      payRef.innerHTML = "";
+      const isDiag = o.order_kind === "diagnostics";
+      const headline = isDiag ? "Cash on collection" : "Cash on delivery";
+      const hint = isDiag
+        ? "Pay when your diagnostic sample collection is completed (unless you prepaid online)."
+        : "Pay when your medicines are delivered.";
+      payRef.classList.remove("hidden");
+      payRef.innerHTML = `
+        <div class="rx-match" style="justify-content: flex-start">
+          <div>
+            <div class="rx-match-title">${escapeHtml(headline)}</div>
+            <div class="rx-match-sub muted">${escapeHtml(hint)}</div>
+            <div class="rx-match-sub muted" style="margin-top: 0.35rem">
+              Payment status: <strong>${escapeHtml(String(o.payment_status || "cod"))}</strong>
+            </div>
+          </div>
+        </div>`;
+    }
+  }
+
+  const addrBox = $("orderAddress");
+  if (addrBox) {
+    const line1 = String(o.address_line1 || "").trim();
+    const pin = String(o.pincode || "").trim();
+    if (line1 || pin || o.city || o.state) {
+      addrBox.classList.remove("hidden");
+      const bits = [
+        line1,
+        o.address_line2 ? String(o.address_line2).trim() : "",
+        o.landmark ? `${String(o.landmark).trim()}` : "",
+        [o.city, o.state].filter(Boolean).map((x) => String(x).trim()).join(", ") || "",
+        pin ? `PIN ${pin}` : "",
+      ].filter(Boolean);
+      const title =
+        o.order_kind === "diagnostics" ? "Sample collection / service address" : "Delivery address";
+      addrBox.innerHTML = `
+        <div class="rx-match" style="justify-content: flex-start">
+          <div>
+            <div class="rx-match-title">${escapeHtml(title)}</div>
+            <div class="rx-match-sub muted">${bits.map((b) => escapeHtml(b)).join(" · ")}</div>
+          </div>
+        </div>`;
+    } else {
+      addrBox.classList.add("hidden");
+      addrBox.innerHTML = "";
     }
   }
 

@@ -2,13 +2,13 @@
  * Grafana k6 stress test: diagnostics search, medicine/compare search,
  * authenticated diagnostics COD bookings, medicine home-delivery bookings.
  *
- * Requires MedLens API + Postgres. Bookings require:
+ * Requires PaxMed API + Postgres. Bookings require:
  *   export LOAD_TEST_TOKEN=<same as server .env LOAD_TEST_TOKEN>
  *
  * Typical:
  *   PGPOOL_MAX=80 DATABASE_URL=... LOAD_TEST_TOKEN=dev-secret-token npm run dev
  *   BASE_URL=http://127.0.0.1:3000 LOAD_TEST_TOKEN=dev-secret-token \
- *     SEARCH_VUS=500 BOOK_VUS=2500 DURATION=3m k6 run loadtest/k6/medlens-stress.js
+ *     SEARCH_VUS=500 BOOK_VUS=2500 DURATION=3m k6 run loadtest/k6/paxmed-stress.js
  *
  * ~10k booking VUs each scenario: BOOK_VUS=10000 — needs substantial k6 host RAM,
  * Postgres max_connections + PGPOOL_MAX (e.g. 80–150), optional PgBouncer.

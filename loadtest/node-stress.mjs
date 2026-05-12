@@ -93,7 +93,7 @@ function pct(arr, p) {
   return percentileFromSorted([...arr].sort((a, b) => a - b), p);
 }
 
-console.log(`MedLens node stress → ${BASE}`);
+console.log(`PaxMed node stress → ${BASE}`);
 
 const searchLat = [];
 let searchOk = 0;

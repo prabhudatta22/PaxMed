@@ -182,7 +182,7 @@ router.post("/aadhaar/complete", requireUser, requireConsumer, async (req, res) 
     linked: true,
     health_id_masked: masked,
     profile_synced: true,
-    message: "MedLens profile was updated from ABHA (ABHA data wins on conflict).",
+    message: "PaxMed profile was updated from ABHA (ABHA data wins on conflict).",
   });
 });
 

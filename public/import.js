@@ -18,10 +18,10 @@ function downloadBlob({ blob, filename }) {
 async function downloadTemplateXlsx() {
   // Prefer static template (works offline, no CDN). Fallback to in-browser generation.
   try {
-    const res = await fetch("/templates/medlens-pharmacy-price-import-template.xlsx");
+    const res = await fetch("/templates/paxmed-pharmacy-price-import-template.xlsx");
     if (res.ok) {
       const blob = await res.blob();
-      downloadBlob({ blob, filename: "medlens-pharmacy-price-import-template.xlsx" });
+      downloadBlob({ blob, filename: "paxmed-pharmacy-price-import-template.xlsx" });
       return;
     }
   } catch {
@@ -89,14 +89,14 @@ async function downloadTemplateXlsx() {
   const blob = new Blob([arr], {
     type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   });
-  downloadBlob({ blob, filename: "medlens-pharmacy-price-import-template.xlsx" });
+  downloadBlob({ blob, filename: "paxmed-pharmacy-price-import-template.xlsx" });
 }
 
 async function downloadLabTemplateXlsx() {
-  const res = await fetch("/templates/medlens-lab-price-import-template.xlsx");
+  const res = await fetch("/templates/paxmed-lab-price-import-template.xlsx");
   if (!res.ok) throw new Error("Lab template not found on server");
   const blob = await res.blob();
-  downloadBlob({ blob, filename: "medlens-lab-price-import-template.xlsx" });
+  downloadBlob({ blob, filename: "paxmed-lab-price-import-template.xlsx" });
 }
 
 $("#downloadTemplate").addEventListener("click", async () => {

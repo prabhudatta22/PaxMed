@@ -54,7 +54,7 @@ async function init() {
     }
     setStatus("abhaStatus", r.data.message || "ABHA linked. Profile updated from ABHA.");
     await reloadAbhaFromProfile();
-    window.parent?.postMessage({ type: "medlens-profile-embed-changed" }, "*");
+    window.parent?.postMessage({ type: "paxmed-profile-embed-changed" }, "*");
   });
 
   $("abhaSyncFromBtn")?.addEventListener("click", async () => {
@@ -66,7 +66,7 @@ async function init() {
     }
     setStatus("abhaStatus", r.data.message || "Synced.");
     await reloadAbhaFromProfile();
-    window.parent?.postMessage({ type: "medlens-profile-embed-changed" }, "*");
+    window.parent?.postMessage({ type: "paxmed-profile-embed-changed" }, "*");
   });
 
   await reloadAbhaFromProfile();

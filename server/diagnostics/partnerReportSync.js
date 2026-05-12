@@ -32,17 +32,18 @@ function parsePayload(raw) {
 }
 
 /**
- * Read MedLens booking context from orders.provider_payload (new envelope + legacy fallback).
+ * Read PaxMed booking context from orders.provider_payload (new envelope + legacy fallback).
  */
 export function extractDiagnosticsReportContext(order) {
   const p = parsePayload(order?.provider_payload);
-  if (p?.medlens && typeof p.medlens === "object") {
+  const envelope = p?.paxmed && typeof p.paxmed === "object" ? p.paxmed : null;
+  if (envelope && typeof envelope === "object") {
     return {
-      partner_booking_id: p.medlens.partner_booking_id != null ? String(p.medlens.partner_booking_id) : null,
-      vendor_booking_id: p.medlens.vendor_booking_id != null ? String(p.medlens.vendor_booking_id) : "",
-      vendor_billing_user_id: p.medlens.vendor_billing_user_id != null ? String(p.medlens.vendor_billing_user_id) : "",
+      partner_booking_id: envelope.partner_booking_id != null ? String(envelope.partner_booking_id) : null,
+      vendor_booking_id: envelope.vendor_booking_id != null ? String(envelope.vendor_booking_id) : "",
+      vendor_billing_user_id: envelope.vendor_billing_user_id != null ? String(envelope.vendor_billing_user_id) : "",
       vendor_customer_id:
-        p.medlens.vendor_customer_id != null ? String(p.medlens.vendor_customer_id).trim() : "",
+        envelope.vendor_customer_id != null ? String(envelope.vendor_customer_id).trim() : "",
       envelope: p,
     };
   }
@@ -52,7 +53,7 @@ export function extractDiagnosticsReportContext(order) {
   return {
     partner_booking_id: order?.provider_order_ref != null ? String(order.provider_order_ref) : null,
     vendor_booking_id: "",
-    vendor_billing_user_id: order?.user_id != null ? `medlens-${order.user_id}` : "",
+    vendor_billing_user_id: order?.user_id != null ? `paxmed-${order.user_id}` : "",
     vendor_customer_id: fb,
     envelope: p,
     legacy: true,
@@ -266,7 +267,7 @@ export async function syncDiagnosticsReportForOrder(pool, orderId, userId) {
     }
   }
 
-  if (!vendorBilling) vendorBilling = `medlens-${userId}`;
+  if (!vendorBilling) vendorBilling = `paxmed-${userId}`;
   if (!vendorCustomer) {
     return { ok: false, skipped: true, reason: "vendor_customer_id_unknown" };
   }

@@ -6,7 +6,7 @@ const { Pool } = pg;
 
 if (!process.env.DATABASE_URL) {
   console.warn(
-    "MedLens: DATABASE_URL is not set. Copy .env.example to .env and configure PostgreSQL."
+    "PaxMed: DATABASE_URL is not set. Copy .env.example to .env and configure PostgreSQL."
   );
 }
 

@@ -7,10 +7,15 @@ const MIN_QUERY_LEN = 2;
 const DEBOUNCE_MS = 380;
 const SUGGEST_MIN_QUERY_LEN = 2;
 const SUGGEST_DEBOUNCE_MS = 180;
-const RECENT_KEY = "medlens_recent_lab_searches_v1";
+const RECENT_KEY = "paxmed_recent_lab_searches_v1";
 const RECENT_MAX = 6;
-const DIAG_PREPAID_KEY = "medlens_diag_prepaid_payload_v1";
-const GEO_STORAGE_KEY = "medlens_geo_location_v1";
+const DIAG_PREPAID_KEY = "paxmed_diag_prepaid_payload_v1";
+const ORDER_SUCCESS_FLASH_KEY = "paxmed_order_success_message_v1";
+const GEO_STORAGE_KEY = "paxmed_geo_location_v1";
+
+function apiFetch(input, init = {}) {
+  return fetch(input, { credentials: "same-origin", ...init });
+}
 
 let cities = [];
 let selectedCategory = "";
@@ -84,8 +89,8 @@ function fmtINR(n) {
   return `₹${x.toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
 }
 
-async function getJson(url, options) {
-  const res = await fetch(url, options);
+async function getJson(url, options = {}) {
+  const res = await apiFetch(url, options);
   const data = await res.json().catch(() => ({}));
   return { ok: res.ok, status: res.status, data };
 }
@@ -244,7 +249,15 @@ function openBookModal(ctx) {
     m.dateInput.value = min;
   }
   if (m.paymentSelect) m.paymentSelect.value = "cod";
-  if (m.hint) m.hint.textContent = "A reminder will be added automatically before your scheduled sample collection.";
+  if (m.hint) {
+    const pc = cleanPincode($("labPincode")?.value || "");
+    const pinNote =
+      pc.length === 6
+        ? ""
+        : " If you haven't saved an address under Profile yet, fill the Pickup pincode field on this page (6 digits).";
+    m.hint.textContent =
+      `A reminder will be added automatically before your scheduled sample collection.${pinNote}`;
+  }
   renderBookSelection();
   m.wrap.classList.remove("hidden");
   m.wrap.setAttribute("aria-hidden", "false");
@@ -290,7 +303,7 @@ function initBookModalHandlers() {
       return;
     }
     const hasH = selected.some((p) => p.vendorKey === "healthians");
-    const hasCat = selected.some((p) => p.vendorKey === "medlens_catalog");
+    const hasCat = selected.some((p) => p.vendorKey === "paxmed_catalog");
     if (hasH && hasCat) {
       if (m.hint) m.hint.textContent = "Do not mix Healthians and catalog packages in one booking. Remove one vendor.";
       return;
@@ -319,6 +332,7 @@ function initBookModalHandlers() {
       })),
       payment_type: m.paymentSelect?.value || "cod",
       scheduled_for: scheduledForIso,
+      collection_pincode: cleanPincode($("labPincode")?.value || ""),
     };
     if (statusEl) statusEl.textContent = "Booking package with diagnostics partner…";
     try {
@@ -340,6 +354,19 @@ function initBookModalHandlers() {
         return;
       }
       const ord = booked.data?.order || {};
+      const oid = ord?.id;
+      if (oid === undefined || oid === null || oid === "") {
+        if (m.hint)
+          m.hint.textContent = "Booking succeeded but we could not read the order id. Open Orders from the menu.";
+        if (statusEl) statusEl.textContent = booked.data?.error || "Booking response incomplete.";
+        m.confirmBtn.disabled = false;
+        return;
+      }
+      try {
+        sessionStorage.setItem(ORDER_SUCCESS_FLASH_KEY, "Diagnostics booking confirmed.");
+      } catch {
+        /* ignore */
+      }
       if (statusEl) {
         statusEl.textContent = `Successfully order placed. Order #${ord.id}${
           ord.partner_booking_ref ? ` · Ref ${ord.partner_booking_ref}` : ""
@@ -347,7 +374,7 @@ function initBookModalHandlers() {
       }
       selectedDiagPackages = new Map();
       closeBookModal();
-      window.location.assign(`/order.html?id=${encodeURIComponent(ord.id)}`);
+      window.location.assign(`/order.html?id=${encodeURIComponent(String(oid))}`);
     } catch (e) {
       const msg = String(e?.message || e);
       if (m.hint) m.hint.textContent = msg;
@@ -436,7 +463,7 @@ async function uploadDiagnosticsPrescriptionAndExtract() {
   try {
     const fd = new FormData();
     fd.append("file", file);
-    const res = await fetch(`/api/labs/prescription/ocr?city=${encodeURIComponent(city)}`, { method: "POST", body: fd });
+    const res = await apiFetch(`/api/labs/prescription/ocr?city=${encodeURIComponent(city)}`, { method: "POST", body: fd });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
       status.textContent = data.error || `OCR failed (${res.status})`;
@@ -497,7 +524,7 @@ function refreshCartBadge() {
 let currentUser = null;
 
 async function postJson(url, body) {
-  const res = await fetch(url, {
+  const res = await apiFetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body || {}),
@@ -559,7 +586,7 @@ async function refreshAuth() {
 
 async function loadCities() {
   try {
-    const res = await fetch("/api/cities");
+    const res = await apiFetch("/api/cities");
     const data = await res.json().catch(() => ({}));
     cities = data.cities || [];
   } catch {
@@ -576,7 +603,7 @@ async function loadCities() {
 }
 
 async function loadCategories() {
-  const res = await fetch("/api/labs/categories");
+  const res = await apiFetch("/api/labs/categories");
   const data = await res.json();
   const cats = data.categories || ["PATHOLOGY"];
   $("labCats").innerHTML = cats
@@ -731,7 +758,7 @@ async function runCompareAll(persistRecent = true) {
         const params = new URLSearchParams({ q, city, pincode });
         if (selectedCategory) params.set("category", selectedCategory);
         appendStoredGeoCoords(params);
-        const res = await fetch(`/api/labs/compare?${params.toString()}`);
+        const res = await apiFetch(`/api/labs/compare?${params.toString()}`);
         const data = await res.json().catch(() => ({}));
         return { ok: res.ok, status: res.status, q, data };
       }),
@@ -779,7 +806,7 @@ async function runCompareAll(persistRecent = true) {
 function canOpenDiagDetail(off) {
   if (String(off?.package_id || "").startsWith("stub:")) return false;
   const vk = String(off?.vendor_key || "");
-  return vk === "healthians" || vk === "medlens_catalog";
+  return vk === "healthians" || vk === "paxmed_catalog";
 }
 
 /** @param {unknown} groups @param {{ min_inr?: unknown; max_inr?: unknown; spread_percent?: unknown } | null | undefined} stats */
@@ -959,7 +986,12 @@ function render(groups, stats) {
       const vendorKey = btn.getAttribute("data-vendor-key") || "";
       const vendorLabel = btn.getAttribute("data-vendor-label") || vendorKey;
       const bookingSupported = btn.getAttribute("data-booking") === "1";
-      if (!city || !packageId || !packageName || !Number.isFinite(priceInr)) return;
+      if (!city || !packageId || !packageName || !Number.isFinite(priceInr)) {
+        setStatus(
+          "Cannot start booking: choose a city, run Compare prices, then pick a row that shows a price.",
+        );
+        return;
+      }
       if (!bookingSupported) {
         setStatus("That vendor row is estimate-only — add Healthians catalog (or catalog when partner is off).");
         return;
@@ -1052,7 +1084,7 @@ async function runSearch() {
   appendStoredGeoCoords(params);
 
   try {
-    const res = await fetch(`/api/labs/compare?${params.toString()}`);
+    const res = await apiFetch(`/api/labs/compare?${params.toString()}`);
     const data = await res.json();
     if (!res.ok) {
       lastCompareMode = "none";
@@ -1115,7 +1147,7 @@ async function refreshIntentHints() {
     return;
   }
   try {
-    const res = await fetch(
+    const res = await apiFetch(
       `/api/labs/intent?q=${encodeURIComponent(q)}&city=${encodeURIComponent(city)}&pincode=${encodeURIComponent(pincode)}`
     );
     const data = await res.json().catch(() => ({}));
@@ -1245,7 +1277,7 @@ async function runSuggestSearch() {
   try {
     const suggestParams = new URLSearchParams({ q });
     if (selectedCategory) suggestParams.set("category", selectedCategory);
-    const res = await fetch(`/api/labs/tests/suggest?${suggestParams.toString()}`, { signal });
+    const res = await apiFetch(`/api/labs/tests/suggest?${suggestParams.toString()}`, { signal });
     const data = await res.json().catch(() => ({}));
     if (signal.aborted) return;
     let items = Array.isArray(data.items) ? data.items : [];
@@ -1257,7 +1289,7 @@ async function runSuggestSearch() {
         const p2 = new URLSearchParams({ q, city, pincode: cleanPincode($("labPincode")?.value || "") });
         if (selectedCategory) p2.set("category", selectedCategory);
         appendStoredGeoCoords(p2);
-        const res2 = await fetch(`/api/labs/search?${p2.toString()}`, { signal });
+        const res2 = await apiFetch(`/api/labs/search?${p2.toString()}`, { signal });
         const data2 = await res2.json().catch(() => ({}));
         if (signal.aborted) return;
         if (res2.ok && Array.isArray(data2.items)) items = data2.items;

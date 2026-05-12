@@ -29,7 +29,7 @@ async function saveUpi(e) {
   setStatus("paymentStatus", "UPI method saved.");
   $("upiForm")?.reset();
   await reloadPayments();
-  window.parent?.postMessage({ type: "medlens-profile-embed-changed" }, "*");
+  window.parent?.postMessage({ type: "paxmed-profile-embed-changed" }, "*");
 }
 
 async function saveCard(e) {
@@ -47,7 +47,7 @@ async function saveCard(e) {
   setStatus("paymentStatus", "Card method saved.");
   $("cardForm")?.reset();
   await reloadPayments();
-  window.parent?.postMessage({ type: "medlens-profile-embed-changed" }, "*");
+  window.parent?.postMessage({ type: "paxmed-profile-embed-changed" }, "*");
 }
 
 async function init() {

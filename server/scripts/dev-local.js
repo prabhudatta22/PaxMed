@@ -38,7 +38,7 @@ async function pickPort(start) {
 
 async function main() {
   // Local defaults (can be overridden by .env)
-  const defaultDbUrl = "postgresql://medlens:medlens@localhost:5432/medlens";
+  const defaultDbUrl = "postgresql://paxmed:paxmed@localhost:5432/paxmed";
   const dbUrl = process.env.DATABASE_URL || defaultDbUrl;
 
   const basePort = Number(process.env.PORT) || 3000;
@@ -53,7 +53,7 @@ async function main() {
   console.log("Seeding demo data...");
   await run("node", ["server/db/seed.js"], { env: { DATABASE_URL: dbUrl } });
 
-  console.log(`Starting MedLens on port ${port}...`);
+  console.log(`Starting PaxMed on port ${port}...`);
   await run(
     "node",
     ["--watch", "server/index.js"],

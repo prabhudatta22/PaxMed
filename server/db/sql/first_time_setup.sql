@@ -1,4 +1,4 @@
--- MedLens: first-time PostgreSQL setup script
+-- PaxMed: first-time PostgreSQL setup script
 --
 -- Usage:
 --   psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f server/db/sql/first_time_setup.sql

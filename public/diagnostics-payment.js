@@ -8,8 +8,8 @@ import {
 } from "./diagnosticsRazorpay.js";
 
 const $ = (id) => document.getElementById(id);
-const DIAG_PREPAID_KEY = "medlens_diag_prepaid_payload_v1";
-const ORDER_SUCCESS_KEY = "medlens_order_success_message_v1";
+const DIAG_PREPAID_KEY = "paxmed_diag_prepaid_payload_v1";
+const ORDER_SUCCESS_KEY = "paxmed_order_success_message_v1";
 
 function fmtINR(n) {
   const x = Number(n);
@@ -100,7 +100,7 @@ async function startRazorpayCheckout(pending) {
       amount: String(ord.amount),
       currency: ord.currency || "INR",
       order_id: ord.order_id,
-      name: "MedLens",
+      name: "PaxMed",
       description: `Diagnostics · ${pending.packages.length} test(s)`,
       theme: { color: "#0f766e" },
       handler(response) {

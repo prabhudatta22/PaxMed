@@ -1,4 +1,4 @@
-MedPlus, Apollo, Netmeds, and Medkart do not ship a single public, keyless JSON “search price” API you can call from MedLens without a commercial / technical onboarding (base URL, auth, and schema they give you).
+MedPlus, Apollo, Netmeds, and Medkart do not ship a single public, keyless JSON “search price” API you can call from PaxMed without a commercial / technical onboarding (base URL, auth, and schema they give you).
 
 Tata 1mg is the one with published merchant documentation (Onedoc): TATA 1mg merchant API docs — still not usable without the credentials and endpoints they issue after signup.
 
@@ -68,7 +68,7 @@ Without the key, Use my location returns a clear error from the API (503 + hint)
 Note: Full address data comes from Google. Local pharmacy prices still use your Postgres city slug; if the user is outside the seeded cities, they’ll see the Google address but should pick the nearest demo city in the list.
 
 Product read (market lens)
-MedLens sits at the intersection of price transparency, local pharmacy discovery, online retailer comparison, and diagnostics / booking-adjacent flows—with home delivery orders, reminders, and WhatsApp hooks. That is a credible wedge in India, where users routinely compare MRP vs discount, check availability by area, and juggle apps (1mg, Apollo, Netmeds, Practo, local chemist WhatsApp).
+PaxMed sits at the intersection of price transparency, local pharmacy discovery, online retailer comparison, and diagnostics / booking-adjacent flows—with home delivery orders, reminders, and WhatsApp hooks. That is a credible wedge in India, where users routinely compare MRP vs discount, check availability by area, and juggle apps (1mg, Apollo, Netmeds, Practo, local chemist WhatsApp).
 
 Below is a PM-style gap analysis: what the market expects vs where the product is thin or missing.
 
@@ -89,7 +89,7 @@ Aggregators win on freshness and coverage. Demo datasets and partial partner fee
 Gap: SLA on price freshness, out-of-stock signals, and confidence labels (“verified 2h ago” vs “indicative”). Consider user-reported price or pharmacy-confirmed feed.
 3. Conversion path after compare
 
-You deep-link to retailers and support MedLens delivery for local—good. Market expects one-tap checkout or saved addresses + payment everywhere.
+You deep-link to retailers and support PaxMed delivery for local—good. Market expects one-tap checkout or saved addresses + payment everywhere.
 Gap: Unified checkout only where you control fulfilment; elsewhere, track handoff (did user complete purchase?) and recover abandoned compare sessions.
 4. Retention & LTV
 
@@ -110,7 +110,7 @@ Gap: A clear business model shapes UX (sponsored ranking vs neutral sort). Neutr
 8. B2B pharmacy story
 
 Marg/RetailGraph import is a strong India-specific hook.
-Gap: Partner portal (not just API keys): dashboards, SKU mapping, price push, order inbox from MedLens deliveries, settlements. Your service_provider order events are a start—market wants operational workflow.
+Gap: Partner portal (not just API keys): dashboards, SKU mapping, price push, order inbox from PaxMed deliveries, settlements. Your service_provider order events are a start—market wants operational workflow.
 9. Mobile & notifications
 
 Flutter exists; market is app-first + WhatsApp.
@@ -126,7 +126,7 @@ Gap: Even a “insurance coming soon” roadmap item matters for enterprise buye
 12. Competitive differentiation (sharp positioning)
 
 “Compare everyone” is crowded. A sharper story: “Verified local + online in one PIN, with honest stock” or “ERP-connected indie pharmacies vs big apps.”
-Gap: One sentence that explains why to open MedLens instead of three retailer apps—then build features that only that story can claim.
+Gap: One sentence that explains why to open PaxMed instead of three retailer apps—then build features that only that story can claim.
 Summary table
 Theme	Market expectation	Likely gap
 Trust	Licences, Rx, policies	Needs production-grade trust packaging
@@ -151,7 +151,7 @@ medicines as the internal master: display_name, generic_name, strength, form, pa
 Search / compare: text match on display_name / generic_name (including “compact” stripping spaces for typos).
 Prescription OCR → drug: matchMedicinesFromText uses pg_trgm similarity on search_vector with score threshold and dedupe by medicine_id.
 Imports: Xlsx long-format creates/links rows; SKU-style values can land in generic_name (e.g. import:sku:… in seeded data), which is a light form of retailer SKU → row but not a clean mapping model.
-Retailers (online): partner search is query-in → offer-out; no shared MedLens product id across channels in that path.
+Retailers (online): partner search is query-in → offer-out; no shared PaxMed product id across channels in that path.
 Gaps vs a real “mapping engine”
 
 No canonical molecule + strength + form + pack layer (duplicates and near-duplicates are expected at scale).
@@ -206,7 +206,7 @@ Operational: Razorpay/webhook and order flows; not the same as marketplace analy
 Gaps
 
 Little platform-side B2B intelligence: search volume, compare impressions, conversion (search → cart → order), benchmarking vs peers (anonymized), category heatmaps.
-Partner analytics depend on sales being fed; ordering via MedLens may not fully mirror that table unless integrated.
+Partner analytics depend on sales being fed; ordering via PaxMed may not fully mirror that table unless integrated.
 Suggested approach
 
 Event log (append-only): search_query, medicine_id, pharmacy_id, event (impression, click, add_to_cart, checkout_start, order), timestamps, optional anonymized session.

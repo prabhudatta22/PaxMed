@@ -8,7 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../core/api_binding.dart';
 
 import '../api/models.dart';
-import '../api/medlens_client.dart';
+import '../api/client.dart';
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key, this.embedded = false});
 
@@ -49,7 +49,7 @@ class _SearchScreenState extends State<SearchScreen> {
     super.dispose();
   }
 
-  MedLensClient _client(BuildContext context) {
+  PaxMedClient _client(BuildContext context) {
     return context.read<ApiBinding>().client;
   }
 
@@ -285,7 +285,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('MedLens'),
+        title: const Text('PaxMed'),
       ),
       body: list,
     );

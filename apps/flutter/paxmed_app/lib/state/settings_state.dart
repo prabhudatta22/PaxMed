@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsState extends ChangeNotifier {
-  static const _kBaseUrl = 'medlens_api_base_url';
+  static const _kBaseUrl = 'paxmed_api_base_url';
 
   /// Defaults:
   /// - Android emulator: http://10.0.2.2:3000

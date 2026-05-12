@@ -1,4 +1,4 @@
-const AUTH_PROFILE_KEY = "medlens_auth_profile_v1";
+const AUTH_PROFILE_KEY = "paxmed_auth_profile_v1";
 
 function normalizeUser(user) {
   if (!user || typeof user !== "object") return null;

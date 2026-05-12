@@ -4,7 +4,7 @@ import 'package:dio_cookie_manager/dio_cookie_manager.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 
-import '../api/medlens_client.dart';
+import '../api/client.dart';
 import '../state/auth_state.dart';
 import '../state/settings_state.dart';
 
@@ -23,11 +23,11 @@ class ApiBinding extends ChangeNotifier {
 
   Dio? _dio;
   PersistCookieJar? _jar;
-  MedLensClient? _client;
+  PaxMedClient? _client;
   bool ready = false;
   String? initError;
 
-  MedLensClient get client {
+  PaxMedClient get client {
     final c = _client;
     if (c == null) {
       throw StateError('ApiBinding not ready');
@@ -70,7 +70,7 @@ class ApiBinding extends ChangeNotifier {
       ),
     );
     _dio!.interceptors.add(CookieManager(_jar!));
-    _client = MedLensClient(_dio!);
+    _client = PaxMedClient(_dio!);
   }
 
   Future<void> clearSessionCookies() async {

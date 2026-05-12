@@ -59,8 +59,8 @@ class CartScreen extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               auth.isLoggedIn
-                  ? 'Use MedLens checkout for pharmacy home delivery (local pharmacy lines) and lab diagnostics bookings. External retailer links stay external.'
-                  : 'Sign in with your phone OTP to place MedLens-backed delivery / diagnostics orders.',
+                  ? 'Use PaxMed checkout for pharmacy home delivery (local pharmacy lines) and lab diagnostics bookings. External retailer links stay external.'
+                  : 'Sign in with your phone OTP to place PaxMed-backed delivery / diagnostics orders.',
             ),
             const SizedBox(height: 12),
             FilledButton(
@@ -73,7 +73,7 @@ class CartScreen extends StatelessWidget {
                         builder: (_) => const CheckoutScreen(),
                       ));
                     },
-              child: Text(auth.isLoggedIn ? 'MedLens checkout…' : 'Sign in & checkout'),
+              child: Text(auth.isLoggedIn ? 'PaxMed checkout…' : 'Sign in & checkout'),
             ),
             const SizedBox(height: 10),
             OutlinedButton.icon(

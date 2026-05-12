@@ -65,7 +65,7 @@ router.post(
       const order = await createRazorpayOrder({
         amountPaise,
         receipt,
-        notes: { medlens_user: String(req.user.id), medlens_flow: "diagnostics" },
+        notes: { paxmed_user: String(req.user.id), paxmed_flow: "diagnostics" },
       });
       res.json({
         key_id: getRazorpayPublicKeyId(),
@@ -155,7 +155,7 @@ router.post("/refund", requireUser, async (req, res) => {
     const refund = await createRazorpayRefund({
       paymentId: row.razorpay_payment_id,
       amountPaise: amountPaise == null ? undefined : amountPaise,
-      notes: { medlens_order_id: String(orderId), medlens_user_id: String(userId) },
+      notes: { paxmed_order_id: String(orderId), paxmed_user_id: String(userId) },
     });
     incMetric("refund_api_ok");
     const rid = String(refund?.id || "").trim();

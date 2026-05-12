@@ -72,12 +72,12 @@ INSERT INTO users (phone_e164, last_login_at) VALUES
 
 -- Demo session for user 1 (for DB inspection; request real login for a fresh token)
 INSERT INTO sessions (id, user_id, created_at, expires_at, revoked_at) VALUES
-  ('seed-demo-session-medlens-01', 1, now() - interval '1 hour', now() + interval '6 days', NULL);
+  ('seed-demo-session-paxmed-01', 1, now() - interval '1 hour', now() + interval '6 days', NULL);
 
 -- OTP row (expired; hash is placeholder — use real /api/auth flow for login)
 INSERT INTO otp_codes (phone_e164, code_hash, purpose, expires_at, consumed_at, ip, user_agent) VALUES
-  ('+919998887766', '$2b$10$placeholderExpiredOtpHashDemoOnly', 'login', now() - interval '1 day', now() - interval '1 day', '127.0.0.1', 'MedLens seed'),
-  ('+919887766554', '$2b$10$placeholderPendingOtpHashDemoOnly', 'login', now() + interval '10 minutes', NULL, '127.0.0.1', 'MedLens seed');
+  ('+919998887766', '$2b$10$placeholderExpiredOtpHashDemoOnly', 'login', now() - interval '1 day', now() - interval '1 day', '127.0.0.1', 'PaxMed seed'),
+  ('+919887766554', '$2b$10$placeholderPendingOtpHashDemoOnly', 'login', now() + interval '10 minutes', NULL, '127.0.0.1', 'PaxMed seed');
 
 -- WhatsApp draft cart + web ready cart (OCR / cart API demos)
 INSERT INTO carts (source, source_ref, wa_from, wa_message_id, status, ocr_text) VALUES

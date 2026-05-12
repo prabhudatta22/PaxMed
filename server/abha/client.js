@@ -81,14 +81,14 @@ export async function fetchAbhaDemographics({ identifier }) {
 }
 
 /**
- * Push MedLens profile changes to ABDM (Health ID update).
+ * Push PaxMed profile changes to ABDM (Health ID update).
  * Extend with real endpoint + signing when in live mode.
  */
-export async function pushAbhaDemographics({ identifier }, medlensProfile) {
+export async function pushAbhaDemographics({ identifier }, paxmedProfile) {
   const mode = getAbhaIntegrationMode();
   if (mode === "off") return { ok: false, skipped: true, reason: "off" };
   if (mode === "stub") {
-    return { ok: true, source: "stub", echoed: medlensProfile };
+    return { ok: true, source: "stub", echoed: paxmedProfile };
   }
   const base = String(process.env.ABDM_HEALTH_ID_API_BASE || "https://healthidsbx.abdm.gov.in/api").replace(/\/$/, "");
   const path = String(process.env.ABDM_PROFILE_UPDATE_PATH || "/v2/account/profile");
@@ -102,7 +102,7 @@ export async function pushAbhaDemographics({ identifier }, medlensProfile) {
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify(medlensProfile),
+    body: JSON.stringify(paxmedProfile),
   });
   if (!res.ok) {
     const t = await res.text();

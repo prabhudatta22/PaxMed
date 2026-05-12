@@ -1,5 +1,5 @@
-export const STORAGE_KEY = "medlens_multi_checkout_v1";
-const FALLBACK_SESSION_KEY = "medlens_multi_checkout_session_v1";
+export const STORAGE_KEY = "paxmed_multi_checkout_v1";
+const FALLBACK_SESSION_KEY = "paxmed_multi_checkout_session_v1";
 
 function safeParse(raw) {
   try {

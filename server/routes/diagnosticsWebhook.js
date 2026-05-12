@@ -25,7 +25,7 @@ function diagnosticsWebhookSecretOk(req) {
 
 /**
  * Partner pushes "report ready" + optional HTTPS `report_url` (Healthians-style signed URL).
- * When `report_url` is omitted, MedLens pulls via getCustomerReport_v2 (`syncDiagnosticsReportForOrder`).
+ * When `report_url` is omitted, PaxMed pulls via getCustomerReport_v2 (`syncDiagnosticsReportForOrder`).
  *
  * Expected JSON keys (flexible): booking_id | booking_ref, report_url?, event_id?,
  * diagnostic_type?, verified_at? (dedupe hints).
@@ -54,7 +54,7 @@ router.post("/", async (req, res) => {
      WHERE order_kind = 'diagnostics'
        AND (
          provider_order_ref = $1
-         OR COALESCE(provider_payload::jsonb -> 'medlens' ->> 'partner_booking_id', '') = $1
+        OR COALESCE(provider_payload::jsonb -> 'paxmed' ->> 'partner_booking_id', '') = $1
        )
      ORDER BY created_at DESC
      LIMIT 20`,

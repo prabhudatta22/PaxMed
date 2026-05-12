@@ -1,5 +1,5 @@
 /**
- * Diagnostics /labs.html: autocomplete list shows while typing (local catalog).
+ * Diagnostics /labs.html: suggestions + price compare grid (after picking a suggestion).
  *
  * Run: node e2e/labs-diagnostics-suggestions.ui.mjs
  * Requires: Postgres (DATABASE_URL), npm run db:migrate + db:seed (or seeded data).
@@ -12,7 +12,7 @@ const projectRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 const PORT = Number(process.env.MEDLENS_TEST_PORT || 4032);
 const BASE = `http://127.0.0.1:${PORT}`;
 const DATABASE_URL =
-  process.env.DATABASE_URL || "postgresql://medlens:medlens@127.0.0.1:5432/medlens";
+  process.env.DATABASE_URL || "postgresql://paxmed:paxmed@127.0.0.1:5432/paxmed";
 
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
@@ -104,11 +104,30 @@ async function main() {
     const vis = await page.locator("#labQ-suggestions .suggestion").count();
     if (vis < 1) throw new Error("Expected at least one visible suggestion row in UI");
 
+    // Pick first suggestion → triggers compare (labs.js runSearch from pick path).
+    await page.locator("#labQ-suggestions .suggestion").first().click();
+
+    await page
+      .locator("#labGrid article.lab-compare-bundle, #labGrid table.lab-vendor-table")
+      .first()
+      .waitFor({ state: "visible", timeout: 25_000 });
+
+    const bookCount = await page.locator("#labGrid button[data-cmp-book]").count();
+    const addCount = await page.locator("#labGrid button[data-cmp-add]").count();
+    if (bookCount + addCount < 1) {
+      throw new Error(
+        "Compare grid has no Book/Add actions (compare API empty or UI regression).",
+      );
+    }
+    console.log(
+      `UI OK: compare grid visible; Book buttons: ${bookCount}, Add buttons: ${addCount}.`,
+    );
+
     await browser.close();
     console.log("UI OK: diagnostics suggestion list visible after typing.");
-    console.log("\nLabs diagnostics suggestions smoke test: PASSED");
+    console.log("\nLabs diagnostics suggestions + compare smoke test: PASSED");
   } catch (e) {
-    console.error("Labs diagnostics suggestions smoke test: FAILED", e?.message || e);
+    console.error("Labs diagnostics suggestions + compare smoke test: FAILED", e?.message || e);
     process.exitCode = 1;
   } finally {
     kill();

@@ -299,8 +299,8 @@ export async function labsCompareBundles(pool, p) {
           tests_included: [],
         }),
         {
-          vendor_key: "medlens_catalog",
-          vendor_label: String(r.lab_name || "MedLens catalog"),
+          vendor_key: "paxmed_catalog",
+          vendor_label: String(r.lab_name || "PaxMed catalog"),
           booking_supported: catalogBookingOk,
           data_mode: "local_catalog",
           vendor_note: partnerEnabled ? "Catalog price for transparency; bookings use contracted partner labs when enabled." : null,

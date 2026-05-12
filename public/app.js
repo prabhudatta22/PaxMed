@@ -30,11 +30,11 @@ let compareAbort = null;
 
 let liveQuery = "";
 
-const GEO_STORAGE_KEY = "medlens_geo_location_v1";
-const RECENT_SEARCH_KEY = "medlens_recent_searches_v1";
+const GEO_STORAGE_KEY = "paxmed_geo_location_v1";
+const RECENT_SEARCH_KEY = "paxmed_recent_searches_v1";
 const RECENT_MAX = 6;
-const COMPARE_SORT_STORAGE_KEY = "medlens_compare_sort_v1";
-const COMPARE_RADIUS_STORAGE_KEY = "medlens_compare_radius_km_v1";
+const COMPARE_SORT_STORAGE_KEY = "paxmed_compare_sort_v1";
+const COMPARE_RADIUS_STORAGE_KEY = "paxmed_compare_radius_km_v1";
 
 const DEFAULT_METRO_CITIES = [
   { slug: "mumbai", name: "Mumbai", state: "Maharashtra" },

@@ -1,4 +1,4 @@
--- MedLens India: PostgreSQL schema (use with DATABASE_URL)
+-- PaxMed India: PostgreSQL schema (use with DATABASE_URL)
 
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
@@ -473,7 +473,7 @@ ALTER TABLE orders ADD COLUMN IF NOT EXISTS razorpay_payment_id TEXT;
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_status TEXT;
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS razorpay_reconciled_at TIMESTAMPTZ;
 
--- One MedLens order per Razorpay payment (replay / double-booking safety)
+-- One PaxMed order per Razorpay payment (replay / double-booking safety)
 CREATE UNIQUE INDEX IF NOT EXISTS idx_orders_razorpay_payment_unique
   ON orders (razorpay_payment_id)
   WHERE razorpay_payment_id IS NOT NULL AND btrim(razorpay_payment_id) <> '';

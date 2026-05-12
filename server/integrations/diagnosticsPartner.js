@@ -389,6 +389,20 @@ function toMF(gender = "") {
   return g.startsWith("f") ? "F" : "M";
 }
 
+/** 10-digit Indian mobile for partner APIs (handles +91 / leading 0). */
+export function toPartnerCallingNumber(phone) {
+  const d = String(phone ?? "").replace(/\D/g, "");
+  if (!d) return "";
+  if (d.length === 10) return d;
+  if (d.length === 11 && d.startsWith("0")) return d.slice(1);
+  if (d.length >= 12 && d.startsWith("91")) {
+    const tail = d.slice(2);
+    if (tail.length === 10) return tail;
+  }
+  if (d.length > 10) return d.slice(-10);
+  return d;
+}
+
 function computeChecksum(rawBody) {
   const staticValue = getEnv("DIAG_B2B_CHECKSUM_STATIC");
   if (staticValue) return staticValue;
@@ -418,7 +432,7 @@ function bookingPayload({
   stateId,
 }) {
   const genderMF = toMF(customer.gender);
-  const callingNumber = String(customer.phone || "").replace(/[^\d]/g, "").slice(-10);
+  const callingNumber = toPartnerCallingNumber(customer.phone);
   const zipcode = String(address.pincode || "").replace(/[^\d]/g, "").slice(0, 6);
   const lat = address.lat != null ? String(address.lat) : getEnv("DIAG_B2B_DEFAULT_LAT", "");
   const lng = address.lng != null ? String(address.lng) : getEnv("DIAG_B2B_DEFAULT_LONG", "");

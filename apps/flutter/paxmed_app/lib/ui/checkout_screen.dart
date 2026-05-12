@@ -236,7 +236,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           keyId: od['key_id'] as String,
           orderId: od['order_id'] as String,
           amountPaise: (od['amount'] as num).toInt(),
-          note: 'MedLens diagnostics prepaid',
+          note: 'PaxMed diagnostics prepaid',
         );
         if (payer == null) {
           setState(() => _msg = 'Payment was not completed.');
@@ -351,7 +351,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         '${auth.phoneE164 ?? auth.user?['phone_e164'] ?? ''}'.trim();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('MedLens checkout')),
+      appBar: AppBar(title: const Text('PaxMed checkout')),
       body: AbsorbPointer(
         absorbing: _busy,
         child: ListView(

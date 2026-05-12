@@ -48,7 +48,7 @@ const loadTok = String(process.env.LOAD_TEST_TOKEN || "").trim();
 if (loadTok) {
   if (process.env.NODE_ENV === "production") {
     console.warn(
-      "MedLens: LOAD_TEST_TOKEN is set — POST /api/load-test/session can mint arbitrary consumer sessions; remove after load testing."
+      "PaxMed: LOAD_TEST_TOKEN is set — POST /api/load-test/session can mint arbitrary consumer sessions; remove after load testing."
     );
   }
   app.use("/api", loadTestRoutes);
@@ -76,5 +76,5 @@ app.get("*", (_req, res) => {
 });
 
 app.listen(port, () => {
-  console.log(`MedLens (India) http://localhost:${port}`);
+  console.log(`PaxMed (India) http://localhost:${port}`);
 });

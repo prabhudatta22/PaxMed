@@ -1,3 +1,3 @@
 id,phone_e164,code_hash,purpose,expires_at,consumed_at,created_at,ip,user_agent
-1,919998887766,$2b$10$placeholderExpiredOtpHashDemoOnly,login,2026-03-31T05:16:39.804Z,2026-03-31T05:16:39.804Z,2026-04-01T05:16:39.804Z,127.0.0.1,MedLens seed
-2,919887766554,$2b$10$placeholderPendingOtpHashDemoOnly,login,2026-03-01T05:26:39.804Z,2026-03-31T05:16:39.804Z,2026-04-01T05:16:39.804Z,127.0.0.1,MedLens seed
+1,919998887766,$2b$10$placeholderExpiredOtpHashDemoOnly,login,2026-03-31T05:16:39.804Z,2026-03-31T05:16:39.804Z,2026-04-01T05:16:39.804Z,127.0.0.1,PaxMed seed
+2,919887766554,$2b$10$placeholderPendingOtpHashDemoOnly,login,2026-03-01T05:26:39.804Z,2026-03-31T05:16:39.804Z,2026-04-01T05:16:39.804Z,127.0.0.1,PaxMed seed

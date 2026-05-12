@@ -64,7 +64,7 @@ function asBool(v) {
 }
 
 /**
- * Parse an ERP export (Marg/RetailGraph/etc.) into MedLens normalized rows.
+ * Parse an ERP export (Marg/RetailGraph/etc.) into PaxMed normalized rows.
  *
  * Because these exports usually don't contain store identity, the caller must provide:
  * { city, state, pharmacy_name } and optionally { chain, address_line, pincode, lat, lng }.

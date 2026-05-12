@@ -1,5 +1,5 @@
 /**
- * Maps MedLens provider id → env var prefix for B2B / sanctioned HTTP feeds.
+ * Maps PaxMed provider id → env var prefix for B2B / sanctioned HTTP feeds.
  * Each retailer issues base URL + credentials under contract (no public keyless API).
  */
 

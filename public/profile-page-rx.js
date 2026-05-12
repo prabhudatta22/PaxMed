@@ -20,7 +20,7 @@ async function init() {
     ev.target.value = "";
     setStatus("rxStatus", "Saved.");
     await refreshList();
-    window.parent?.postMessage({ type: "medlens-profile-embed-changed" }, "*");
+    window.parent?.postMessage({ type: "paxmed-profile-embed-changed" }, "*");
   });
 
   await refreshList();

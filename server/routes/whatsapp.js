@@ -55,7 +55,7 @@ router.post("/", async (req, res) => {
           if (!userRes.rows.length) {
             await sendTextMessage({
               toWaId: waFrom,
-              text: "MedLens: I couldn’t find your account. Please login on the website once with OTP, then try again.",
+              text: "PaxMed: I couldn’t find your account. Please login on the website once with OTP, then try again.",
             }).catch(() => {});
             continue;
           }
@@ -81,14 +81,14 @@ router.post("/", async (req, res) => {
           if (!ordRes.rows.length) {
             await sendTextMessage({
               toWaId: waFrom,
-              text: orderId ? `MedLens: No order #${orderId} found.` : "MedLens: No orders found yet.",
+              text: orderId ? `PaxMed: No order #${orderId} found.` : "PaxMed: No orders found yet.",
             }).catch(() => {});
             continue;
           }
           const o = ordRes.rows[0];
           await sendTextMessage({
             toWaId: waFrom,
-            text: `MedLens: Order #${o.id} status: ${o.status}. Delivery: ${o.delivery_option}${
+            text: `PaxMed: Order #${o.id} status: ${o.status}. Delivery: ${o.delivery_option}${
               o.scheduled_for ? ` (scheduled ${new Date(o.scheduled_for).toLocaleString("en-IN")})` : ""
             }.`,
           }).catch(() => {});
@@ -177,7 +177,7 @@ router.post("/", async (req, res) => {
         .join("\n");
 
       const savedLine = prescriptionId
-        ? "\n\nYour prescription photo is saved on your MedLens account for checkout and future orders."
+        ? "\n\nYour prescription photo is saved on your PaxMed account for checkout and future orders."
         : userRes.rows.length
           ? ""
           : "\n\nTip: log in once on the website with the same mobile number so we can save your prescription to your account.";

@@ -6,6 +6,7 @@ import {
   createPartnerDiagnosticsBooking,
   getPartnerBookingStatus,
   isDiagnosticsPartnerEnabled,
+  toPartnerCallingNumber,
 } from "../integrations/diagnosticsPartner.js";
 import {
   assertCapturedDiagnosticsPayment,
@@ -315,6 +316,36 @@ async function loadBookingAddress({ userId, addressId }) {
   return fallback.rows[0] || null;
 }
 
+function hasCompleteCollectionAddress(addr) {
+  if (!addr) return false;
+  const line = String(addr.address_line1 || "").trim();
+  const pin = String(addr.pincode || "").replace(/\D/g, "");
+  return Boolean(line && pin.length === 6);
+}
+
+/**
+ * When Profile has no saved address but the Diagnostics page sends a pincode from the finder form,
+ * create a minimal pickup row so home-collection booking can complete.
+ */
+async function ensureDiagnosticsAddressFromLabsForm(pool, userId, body, citySlug) {
+  const pin = String(body?.collection_pincode ?? "").replace(/\D/g, "").slice(0, 6);
+  if (!/^\d{6}$/.test(pin)) return null;
+  const line1 =
+    String(body?.collection_address_line1 || "").trim().slice(0, 200) || "Home collection";
+  const city = String(citySlug || "").trim().toLowerCase();
+  const { rows: cntRows } = await pool.query(`SELECT COUNT(*)::int AS c FROM user_addresses WHERE user_id = $1`, [
+    userId,
+  ]);
+  const makeDefault = (cntRows[0]?.c || 0) === 0;
+  const ins = await pool.query(
+    `INSERT INTO user_addresses (user_id, label, address_line1, city, state, pincode, is_default, updated_at)
+     VALUES ($1, 'Diagnostics', $2, $3, '', $4, $5, now())
+     RETURNING id, address_line1, address_line2, landmark, city, state, pincode, lat, lng`,
+    [userId, line1, city, pin, makeDefault]
+  );
+  return ins.rows[0] || null;
+}
+
 async function maybeNotifyWhatsapp({ userPhoneE164, text }) {
   if (!isWhatsappConfigured()) return;
   const wa = toWaIdFromE164(userPhoneE164);
@@ -373,11 +404,15 @@ router.post("/", async (req, res) => {
 
   const feePaise = Math.round(Number(q.fee_inr) * 100);
   const totalPaise = itemsSubtotalPaise + feePaise;
-  if (totalPaise < 100) {
-    return res.status(400).json({ error: "Order total must be at least ₹1" });
-  }
 
   const paymentType = String(req.body?.payment_type || "cod").trim().toLowerCase() === "prepaid" ? "prepaid" : "cod";
+  if (paymentType === "prepaid") {
+    if (totalPaise < 100) {
+      return res.status(400).json({ error: "Order total must be at least ₹1 for online payment." });
+    }
+  } else if (totalPaise <= 0) {
+    return res.status(400).json({ error: "Order total must be greater than ₹0 for cash on delivery." });
+  }
 
   let paymentMeta = null;
   if (paymentType === "prepaid") {
@@ -530,8 +565,8 @@ router.post("/", async (req, res) => {
       userPhoneE164: req.user.phone_e164,
       text:
         paymentType === "prepaid"
-          ? `MedLens: Order #${order.id} placed · prepaid ✓ (${order.payment_status}). Delivery: ${order.delivery_option}.`
-          : `MedLens: Order #${order.id} placed (${order.payment_status}). Status: ${order.status}. Delivery option: ${order.delivery_option}.`,
+          ? `PaxMed: Order #${order.id} placed · prepaid ✓ (${order.payment_status}). Delivery: ${order.delivery_option}.`
+          : `PaxMed: Order #${order.id} placed (${order.payment_status}). Status: ${order.status}. Delivery option: ${order.delivery_option}.`,
     });
 
     res.status(201).json({
@@ -653,18 +688,28 @@ router.post("/diagnostics", async (req, res) => {
     userId,
     addressId: Number.isFinite(addressId) && addressId > 0 ? addressId : null,
   });
-  if (!address?.address_line1 || !address?.pincode) {
-    return res.status(400).json({ error: "Please add a valid address with pincode in Profile before booking diagnostics." });
+  let bookingAddress = hasCompleteCollectionAddress(address)
+    ? address
+    : await ensureDiagnosticsAddressFromLabsForm(pool, userId, req.body, primary.city);
+  if (!hasCompleteCollectionAddress(bookingAddress)) {
+    return res.status(400).json({
+      error:
+        "Enter a 6-digit pincode on the Diagnostics page (Pickup pincode field) or add a saved address with pincode under Profile before booking.",
+    });
   }
 
   const patient = req.body?.patient || {};
   const patientName = String(patient.name || req.user.full_name || "").trim();
   const patientAge = Number(patient.age || 30);
   const patientGender = normalizeGender(patient.gender || req.user.gender);
-  const patientPhone = String(patient.phone || req.user.phone_e164 || "").trim();
+  const patientPhoneRaw = String(patient.phone || req.user.phone_e164 || "").trim();
+  const patientPhone = toPartnerCallingNumber(patientPhoneRaw);
   const patientEmail = String(patient.email || req.user.email || "").trim();
-  if (!patientName || !patientPhone) {
-    return res.status(400).json({ error: "Patient name and phone are required. Update your profile and retry." });
+  if (!patientName || !/^\d{10}$/.test(patientPhone)) {
+    return res.status(400).json({
+      error:
+        "Patient name and a valid 10-digit Indian mobile are required. Add your phone under Profile (or OTP login) before booking COD/prepaid.",
+    });
   }
 
   let diagPrescriptionId = null;
@@ -691,18 +736,18 @@ router.post("/diagnostics", async (req, res) => {
           gender: patientGender,
           phone: patientPhone,
           email: patientEmail || null,
-          vendor_user_id: `medlens-${userId}`,
+          vendor_user_id: `paxmed-${userId}`,
         },
         address: {
-          address_line1: address.address_line1,
-          address_line2: address.address_line2 || "",
-          locality: address.city || city,
-          landmark: address.landmark || "",
-          city: address.city || city,
-          state: address.state || "",
-          pincode: String(address.pincode || "").trim(),
-          lat: address.lat,
-          lng: address.lng,
+          address_line1: bookingAddress.address_line1,
+          address_line2: bookingAddress.address_line2 || "",
+          locality: bookingAddress.city || city,
+          landmark: bookingAddress.landmark || "",
+          city: bookingAddress.city || city,
+          state: bookingAddress.state || "",
+          pincode: String(bookingAddress.pincode || "").trim(),
+          lat: bookingAddress.lat,
+          lng: bookingAddress.lng,
         },
         city,
         paymentType,
@@ -716,7 +761,7 @@ router.post("/diagnostics", async (req, res) => {
     providerBooking = {
       booking_ref: localRef,
       vendor_booking_id: localRef,
-      vendor_billing_user_id: `medlens-${userId}`,
+      vendor_billing_user_id: `paxmed-${userId}`,
       vendor_customer_id: null,
       slot: null,
       freeze_ref: null,
@@ -725,7 +770,7 @@ router.post("/diagnostics", async (req, res) => {
   }
 
   const diagnosticsPayloadEnvelope = {
-    medlens: {
+    paxmed: {
       partner_booking_id: providerBooking.booking_ref ?? null,
       vendor_booking_id: providerBooking.vendor_booking_id ?? null,
       vendor_billing_user_id: providerBooking.vendor_billing_user_id ?? null,
@@ -754,8 +799,8 @@ router.post("/diagnostics", async (req, res) => {
         [
           userId,
           scheduledIso,
-          address.id,
-          partnerEnabled ? "healthians" : "medlens-local",
+          bookingAddress.id,
+          partnerEnabled ? "healthians" : "paxmed-local",
           providerBooking.booking_ref || null,
           JSON.stringify(diagnosticsPayloadEnvelope),
           `Diagnostics package booking in ${city} (${paymentType.toUpperCase()}) · ${packages.length} test(s)`,
@@ -956,7 +1001,7 @@ router.post("/:id/cancel", async (req, res) => {
 
   await maybeNotifyWhatsapp({
     userPhoneE164: req.user.phone_e164,
-    text: `MedLens: Order #${id} cancelled.`,
+    text: `PaxMed: Order #${id} cancelled.`,
   });
 
   res.json({ ok: true });
@@ -1039,7 +1084,7 @@ router.post("/:id/events", async (req, res) => {
   const phone = u.rows[0]?.phone_e164;
   await maybeNotifyWhatsapp({
     userPhoneE164: phone,
-    text: `MedLens: Order #${id} status updated → ${status}${message ? ` (${message})` : ""}`,
+    text: `PaxMed: Order #${id} status updated → ${status}${message ? ` (${message})` : ""}`,
   });
 
   res.json({ ok: true });

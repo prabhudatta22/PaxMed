@@ -1,6 +1,6 @@
-# MedLens
+# PaxMed
 
-https://medlens-h4ym.onrender.com/
+https://paxmed-h4ym.onrender.com/
 
 “Lens” = clarity, transparency — see the real price before you buy.
 
@@ -33,7 +33,7 @@ Install Docker Desktop, then start Postgres via Compose:
    ```bash
    cp .env.example .env
    # default for docker-compose above:
-   # DATABASE_URL=postgresql://medlens:medlens@localhost:5432/medlens
+   # DATABASE_URL=postgresql://paxmed:paxmed@localhost:5432/paxmed
    ```
 
 3. **Install and migrate**
@@ -54,7 +54,7 @@ Install Docker Desktop, then start Postgres via Compose:
    npm run db:load-full-data
    ```
 
-   To reproduce the spreadsheet import from your own file instead: `npm run db:import-dataset` (see `server/scripts/import-medlens-dataset.js`).
+   To reproduce the spreadsheet import from your own file instead: `npm run db:import-dataset` (see `server/scripts/import-paxmed-dataset.js`).
 
 4. Open **http://localhost:3000** — type a medicine name; the app queries each configured online retailer in parallel and shows matching **demo** pharmacy rows for the selected city.
 
@@ -66,7 +66,7 @@ Install Docker Desktop, then start Postgres via Compose:
 
 ## Importing ERP exports (Marg / RetailGraph)
 
-MedLens supports ingesting common **ERP export files** (CSV/XLSX) from retail pharmacy systems like **Marg** and **RetailGraph**.
+PaxMed supports ingesting common **ERP export files** (CSV/XLSX) from retail pharmacy systems like **Marg** and **RetailGraph**.
 
 - **Endpoints**:
   - `POST /api/import/erp/marg`
@@ -99,16 +99,16 @@ npm run db:seed
 ```
 
 - **Connection is “refused”**: wait ~3–10 seconds after `db:up`, or check `docker ps` to confirm Postgres is running on `localhost:5432`.
-- **Wrong credentials**: ensure `.env` has `DATABASE_URL=postgresql://medlens:medlens@localhost:5432/medlens`.
+- **Wrong credentials**: ensure `.env` has `DATABASE_URL=postgresql://paxmed:paxmed@localhost:5432/paxmed`.
 
 ## Flutter mobile app
 
-Flutter UI lives in `apps/flutter/medlens_app`.
+Flutter UI lives in `apps/flutter/paxmed_app`.
 
 Run it:
 
 ```bash
-cd apps/flutter/medlens_app
+cd apps/flutter/paxmed_app
 flutter create .
 flutter pub get
 flutter run
@@ -129,7 +129,7 @@ The home page can use **the browser’s geolocation** (with your permission) and
 
 ## AI enhancements (search, OCR, suggestions)
 
-MedLens includes a few **AI-assisted** features designed to improve search quality and reduce manual typing. All of them are implemented with **safe fallbacks** (so the app still works without any AI API key).
+PaxMed includes a few **AI-assisted** features designed to improve search quality and reduce manual typing. All of them are implemented with **safe fallbacks** (so the app still works without any AI API key).
 
 ### 1) Query normalization (optional OpenAI)
 
@@ -178,15 +178,15 @@ Diagnostics search shows quick intent chips (e.g. Thyroid/CBC/Lipid) for common 
 - **Endpoint**: `GET /api/labs/intent?q=<query>&city=<citySlug>`
 - **Output**: `{ intents: [...], suggestions: [...] }`
 
-### 3.1) MedLens ↔ Healthians request/response contract map
+### 3.1) PaxMed ↔ Healthians request/response contract map
 
 This section is a compact handoff map for diagnostics partner integration.
 
-| MedLens endpoint | Healthians endpoint(s) | Key request mapping (MedLens -> Healthians) | Key response mapping (Healthians -> MedLens) |
+| PaxMed endpoint | Healthians endpoint(s) | Key request mapping (PaxMed -> Healthians) | Key response mapping (Healthians -> PaxMed) |
 | --- | --- | --- | --- |
 | `GET /api/labs/search` | `/<partner>/getPartnerProducts` | `q, city, category, pincode` -> `zipcode, test_type(pathology/radiology), start, limit, client_id` | Normalized `items[]`: `package_id/deal_id, heading, sub_heading, category, price_inr, mrp_inr, report_tat_hours, home_collection, lab_name` |
 | `GET /api/labs/package/:packageId` | `/<partner>/getPartnerProducts` (lookup by id) | `packageId, city, pincode` -> fetch partner products and match by `package_id/deal_id/product_type_id` | Single normalized `item` (same shape as diagnostics search row) |
-| `POST /api/orders/diagnostics` | `/<partner>/getAccessToken` -> `/<partner>/checkServiceabilityByLocation_v2` -> `/<partner>/getSlotsByLocation` -> `/<partner>/freezeSlot_v1` -> `/<partner>/createBooking_v3` | MedLens body `packages[], scheduled_for, payment_type, patient, address` -> Healthians booking payload `customer[], slot.slot_id, package:[{deal_id:[...]}], payment_option, discounted_price, vendor_booking_id, vendor_billing_user_id, zipcode/lat/long/zone_id`; optional `X-Checksum` header | Partner booking mapped to MedLens order metadata: `booking_ref, slot, freeze_ref, zone_id, provider_response`; stored as `provider_order_ref/provider_payload` |
+| `POST /api/orders/diagnostics` | `/<partner>/getAccessToken` -> `/<partner>/checkServiceabilityByLocation_v2` -> `/<partner>/getSlotsByLocation` -> `/<partner>/freezeSlot_v1` -> `/<partner>/createBooking_v3` | PaxMed body `packages[], scheduled_for, payment_type, patient, address` -> Healthians booking payload `customer[], slot.slot_id, package:[{deal_id:[...]}], payment_option, discounted_price, vendor_booking_id, vendor_billing_user_id, zipcode/lat/long/zone_id`; optional `X-Checksum` header | Partner booking mapped to PaxMed order metadata: `booking_ref, slot, freeze_ref, zone_id, provider_response`; stored as `provider_order_ref/provider_payload` |
 | `GET /api/orders/:id` (diagnostics orders) | `/<partner>/getBookingStatus` | `provider_order_ref` -> `{ booking_id }` | `partner_status`: `booking_id, booking_status, customer[], raw` |
 
 Shared auth/config notes:
@@ -210,8 +210,8 @@ Price uploads now include **warnings** for suspicious rows (e.g. price > MRP, hu
 
 The UI stores **recent searches** locally (in the browser) and surfaces them as quick chips.
 
-- Medicines: `localStorage` key `medlens_recent_searches_v1`
-- Diagnostics: `localStorage` key `medlens_recent_lab_searches_v1`
+- Medicines: `localStorage` key `paxmed_recent_searches_v1`
+- Diagnostics: `localStorage` key `paxmed_recent_lab_searches_v1`
 
 ## WhatsApp prescription intake (scan -> cart)
 
@@ -233,12 +233,12 @@ After setup, a user can send a **photo of the prescription** to your WhatsApp nu
 
 ## Saved prescriptions (account, checkout, orders)
 
-MedLens keeps **uploaded prescription files** on the user’s account for **checkout**, **order fulfilment** (pharmacy verification), and **future reference**. This complements the **OCR-only** flows above (`POST /api/prescription/ocr` does not persist the file by itself).
+PaxMed keeps **uploaded prescription files** on the user’s account for **checkout**, **order fulfilment** (pharmacy verification), and **future reference**. This complements the **OCR-only** flows above (`POST /api/prescription/ocr` does not persist the file by itself).
 
 ### Behaviour
 
 - **Profile** (`/profile.html` → *Saved prescriptions*): upload a **photo or PDF** (camera-friendly on mobile). List, **View**, or **Delete** (delete is blocked if a row is still linked to an order).
-- **Checkout** (`/checkout.html`): when logged in, a **Prescription** panel lists saved files, supports a **new upload**, shows a **preview** (or PDF link), and attaches the selected file to **home delivery** (`POST /api/orders`) and **diagnostics** (`POST /api/orders/diagnostics`, including prepaid payloads). The last choice is remembered in the browser as `localStorage` key `medlens_checkout_prescription_id`.
+- **Checkout** (`/checkout.html`): when logged in, a **Prescription** panel lists saved files, supports a **new upload**, shows a **preview** (or PDF link), and attaches the selected file to **home delivery** (`POST /api/orders`) and **diagnostics** (`POST /api/orders/diagnostics`, including prepaid payloads). The last choice is remembered in the browser as `localStorage` key `paxmed_checkout_prescription_id`.
 - **Order detail** (`/order.html?id=…`): if the order has a linked prescription, a **View** link appears (same authenticated file endpoint).
 - **Storage**: files live under **`uploads/prescriptions/<userId>/`** on the server; the directory is **gitignored** (`uploads/` in `.gitignore`). Run **`npm run db:migrate`** so `user_prescriptions` and `orders.prescription_id` / `carts.prescription_id` exist.
 
@@ -259,7 +259,7 @@ Schema: `user_prescriptions` plus FKs from `orders` and `carts` — see `server/
 
 ## Razorpay (diagnostics prepaid, production)
 
-MedLens uses **Razorpay Standard Checkout** for **diagnostics** cart checkout on `/checkout.html`. The server creates orders (`POST /api/payments/razorpay/order`), verifies signatures on `POST /api/orders/diagnostics`, and reconciles **webhooks** at **`POST /webhook/razorpay`** (raw JSON body + `X-Razorpay-Signature`).
+PaxMed uses **Razorpay Standard Checkout** for **diagnostics** cart checkout on `/checkout.html`. The server creates orders (`POST /api/payments/razorpay/order`), verifies signatures on `POST /api/orders/diagnostics`, and reconciles **webhooks** at **`POST /webhook/razorpay`** (raw JSON body + `X-Razorpay-Signature`).
 
 **Deploy checklist**
 
@@ -277,8 +277,8 @@ Open `APP_BASE_URL/import.html` and upload an `.xlsx` file in **long format** (o
 
 Downloadable templates (also regenerable with **`npm run generate:partner-templates`**):
 
-- **`public/templates/medlens-pharmacy-price-import-template.xlsx`** — medicines / retail pharmacy rows  
-- **`public/templates/medlens-lab-price-import-template.xlsx`** — diagnostics **lab_test_prices** rows (`test_id` must match **`lab_tests.id`**)
+- **`public/templates/paxmed-pharmacy-price-import-template.xlsx`** — medicines / retail pharmacy rows
+- **`public/templates/paxmed-lab-price-import-template.xlsx`** — diagnostics **lab_test_prices** rows (`test_id` must match **`lab_tests.id`**)
 
 ### Pharmacy sheet — headers
 
@@ -320,11 +320,11 @@ All partner endpoints require header `x-api-key: <key>`.
 - `GET /api/partner/me`
 - `GET /api/partner/sales/summary?from=YYYY-MM-DD&to=YYYY-MM-DD`
 - `GET /api/partner/sales/recent`
-- `GET /api/partner/catalog/compare-summary?from=…&to=…` — B2B **demand from local compare**: aggregates MedLens-written **`analytics_events`** rows (`event_type = catalog_compare_impression`) for **this partner’s pharmacy**. Requires **`CATALOG_ANALYTICS=1`** on the app server so `/api/compare*` routes persist impressions (see **Catalog intelligence**).
+- `GET /api/partner/catalog/compare-summary?from=…&to=…` — B2B **demand from local compare**: aggregates PaxMed-written **`analytics_events`** rows (`event_type = catalog_compare_impression`) for **this partner’s pharmacy**. Requires **`CATALOG_ANALYTICS=1`** on the app server so `/api/compare*` routes persist impressions (see **Catalog intelligence**).
 
 ## Catalog intelligence & local DB compare
 
-MedLens keeps a small **catalog intelligence** layer on top of the demo `medicines` / `pharmacy_prices` tables so local compare can group **equivalent drug concepts**, surface **per-unit pricing**, respect **stock freshness** in ranking when lat/lng is provided, optionally **bias featured listings** (with a hard cap), and optionally log **partner-visible demand**.
+PaxMed keeps a small **catalog intelligence** layer on top of the demo `medicines` / `pharmacy_prices` tables so local compare can group **equivalent drug concepts**, surface **per-unit pricing**, respect **stock freshness** in ranking when lat/lng is provided, optionally **bias featured listings** (with a hard cap), and optionally log **partner-visible demand**.
 
 ### Schema (PostgreSQL)
 
@@ -386,7 +386,7 @@ If `NODE_ENV` is not `production`, the API returns the OTP as `dev_otp` to make 
 
 ## ABHA / Health ID (ABDM)
 
-MedLens can link a consumer account to **ABHA** (Ayushman Bharat Health Account) under India’s **ABDM** (Ayushman Bharat Digital Mission), sync demographics into the local profile, and (in stub mode) exercise the full UI without calling real government APIs.
+PaxMed can link a consumer account to **ABHA** (Ayushman Bharat Health Account) under India’s **ABDM** (Ayushman Bharat Digital Mission), sync demographics into the local profile, and (in stub mode) exercise the full UI without calling real government APIs.
 
 ### Who can use it
 
@@ -423,7 +423,7 @@ Base path: **`/api/abha`** (`server/routes/abha.js`). Schema is ensured on first
 | `GET` | `/api/abha/link` | Current link: masked id, verification/sync timestamps, `source_mode`. |
 | `POST` | `/api/abha/aadhaar/initiate` | Body: `health_id` / `abha_id` / `identifier`. Starts OTP session (stub or future live). |
 | `POST` | `/api/abha/aadhaar/complete` | Body: `txn_id`, `otp`. Completes link and syncs demographics. |
-| `POST` | `/api/abha/sync-from-abha` | Pull latest from ABHA into MedLens profile (requires existing link). |
+| `POST` | `/api/abha/sync-from-abha` | Pull latest from ABHA into PaxMed profile (requires existing link). |
 | `POST` | `/api/abha/push-profile` | Push local profile snapshot toward ABHA (stub no-ops network; live uses env base/path + bearer token). |
 
 `GET /api/profile` also returns an **`abha`** summary for the shell UI (`server/routes/profile.js`).
@@ -452,7 +452,7 @@ The home page calls `GET /api/online/compare`, which requests **MedPlus Mart**, 
 
 ### Sanctioned partner APIs (real prices)
 
-These brands do **not** publish a single anonymous public JSON API for third-party price aggregation. **MedLens integrates each retailer only through HTTP endpoints you obtain under contract** (base URL, path, auth header, JSON shape).
+These brands do **not** publish a single anonymous public JSON API for third-party price aggregation. **PaxMed integrates each retailer only through HTTP endpoints you obtain under contract** (base URL, path, auth header, JSON shape).
 
 Implementation:
 
@@ -485,7 +485,7 @@ Set **`APOLLO_CATALOG_AUTHORIZATION`** to the `Authorization` header value from 
 
 ### Netmeds — optional consumer search
 
-Set **`NETMEDS_CATALOG_BEARER`** to the bearer token (without the `Bearer ` prefix) or **`NETMEDS_CATALOG_AUTHORIZATION`** to the full value (with `Bearer ` if required). Optional **`NETMEDS_CATALOG_LOCATION_JSON`** is sent as **`x-location-detail`** (defaults to a Delhi pincode if unset). The browser uses **`x-fp-signature`** and cookies in some cases; MedLens only sends Bearer + location + Referer — if Netmeds returns errors, capture newer headers in DevTools or use **`NETMEDS_PARTNER_*`** instead. Parser: first page **`items[]`** — **`price.effective.min`** and **`price.marked.min`**. Code: `server/integrations/netmedsCatalog.js`.
+Set **`NETMEDS_CATALOG_BEARER`** to the bearer token (without the `Bearer ` prefix) or **`NETMEDS_CATALOG_AUTHORIZATION`** to the full value (with `Bearer ` if required). Optional **`NETMEDS_CATALOG_LOCATION_JSON`** is sent as **`x-location-detail`** (defaults to a Delhi pincode if unset). The browser uses **`x-fp-signature`** and cookies in some cases; PaxMed only sends Bearer + location + Referer — if Netmeds returns errors, capture newer headers in DevTools or use **`NETMEDS_PARTNER_*`** instead. Parser: first page **`items[]`** — **`price.effective.min`** and **`price.marked.min`**. Code: `server/integrations/netmedsCatalog.js`.
 
 ### Dev-only illustrative fallback
 
@@ -507,9 +507,9 @@ Retailer sites: [MedPlus Mart](https://www.medplusmart.com/), [Apollo Pharmacy](
 
 ## Multi-pharmacy checkout
 
-Open **`/checkout.html`** (header **Cart** or footer **Multi checkout** on the home page). Use **Add** on local pharmacy rows or online retailer rows to build one cart across multiple destinations. The cart lives in the browser (**`localStorage`** only); MedLens does **not** take payment—you complete each purchase on the pharmacy or retailer site. **Open all checkouts** opens tabs in a short stagger; some browsers block many pop-ups at once, so use per-row **Open** links if needed.
+Open **`/checkout.html`** (header **Cart** or footer **Multi checkout** on the home page). Use **Add** on local pharmacy rows or online retailer rows to build one cart across multiple destinations. The cart lives in the browser (**`localStorage`** only); PaxMed does **not** take payment—you complete each purchase on the pharmacy or retailer site. **Open all checkouts** opens tabs in a short stagger; some browsers block many pop-ups at once, so use per-row **Open** links if needed.
 
-When you are logged in, the **Prescription** section on checkout lets you attach a **saved or newly uploaded** prescription to **MedLens home delivery** and **diagnostics** orders (see **Saved prescriptions** above).
+When you are logged in, the **Prescription** section on checkout lets you attach a **saved or newly uploaded** prescription to **PaxMed home delivery** and **diagnostics** orders (see **Saved prescriptions** above).
 
 ## Home search (live)
 

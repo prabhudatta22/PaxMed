@@ -45,7 +45,7 @@ async function saveManualAddress(e) {
   setStatus("addressStatus", "Address saved.");
   $("addressForm")?.reset();
   await reloadAddresses();
-  window.parent?.postMessage({ type: "medlens-profile-embed-changed" }, "*");
+  window.parent?.postMessage({ type: "paxmed-profile-embed-changed" }, "*");
 }
 
 async function saveCurrentLocationAddress() {
@@ -86,7 +86,7 @@ async function saveCurrentLocationAddress() {
         }
         setStatus("addressStatus", "Current location saved as default address.");
         await reloadAddresses();
-        window.parent?.postMessage({ type: "medlens-profile-embed-changed" }, "*");
+        window.parent?.postMessage({ type: "paxmed-profile-embed-changed" }, "*");
       } catch (err) {
         setStatus("addressStatus", String(err?.message || err));
       }

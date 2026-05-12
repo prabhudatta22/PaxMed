@@ -10,14 +10,14 @@ import 'profile_screen.dart';
 import 'search_screen.dart';
 import 'settings_sheet.dart';
 
-class MedLensShell extends StatefulWidget {
-  const MedLensShell({super.key});
+class PaxMedShell extends StatefulWidget {
+  const PaxMedShell({super.key});
 
   @override
-  State<MedLensShell> createState() => _MedLensShellState();
+  State<PaxMedShell> createState() => _PaxMedShellState();
 }
 
-class _MedLensShellState extends State<MedLensShell> {
+class _PaxMedShellState extends State<PaxMedShell> {
   int _tab = 0;
 
   Future<void> _openSettings(BuildContext cx) async {
@@ -36,7 +36,7 @@ class _MedLensShellState extends State<MedLensShell> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('MedLens · ${_titles[_tab]}'),
+        title: Text('PaxMed · ${_titles[_tab]}'),
         actions: [
           IconButton(onPressed: () => _openSettings(context), icon: const Icon(Icons.settings)),
           Badge(
@@ -109,6 +109,6 @@ class ApiBootstrapGate extends StatelessWidget {
       );
     }
 
-    return const MedLensShell();
+    return const PaxMedShell();
   }
 }

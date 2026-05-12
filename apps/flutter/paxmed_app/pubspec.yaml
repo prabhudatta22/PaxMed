@@ -1,5 +1,5 @@
-name: medlens_app
-description: MedLens mobile app (Flutter) - live medicine search + multi-checkout.
+name: paxmed_app
+description: PaxMed mobile app (Flutter) - live medicine search + multi-checkout.
 publish_to: "none"
 version: 0.1.0+1
 

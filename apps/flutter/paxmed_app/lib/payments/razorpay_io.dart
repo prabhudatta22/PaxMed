@@ -51,7 +51,7 @@ Future<RazorpayPayResult?> collectDiagnosticsPayment({
     'key': keyId,
     'amount': amountPaise,
     'currency': 'INR',
-    'name': 'MedLens',
+    'name': 'PaxMed',
     'order_id': orderId,
     'description': note,
   });

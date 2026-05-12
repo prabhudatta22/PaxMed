@@ -12,11 +12,11 @@ import 'ui/home_shell.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const MedLensApp());
+  runApp(const PaxMedApp());
 }
 
-class MedLensApp extends StatelessWidget {
-  const MedLensApp({super.key});
+class PaxMedApp extends StatelessWidget {
+  const PaxMedApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -34,7 +34,7 @@ class MedLensApp extends StatelessWidget {
         ),
       ],
       child: MaterialApp(
-        title: 'MedLens',
+        title: 'PaxMed',
         theme: AppTheme.light(),
         home: const ApiBootstrapGate(),
       ),

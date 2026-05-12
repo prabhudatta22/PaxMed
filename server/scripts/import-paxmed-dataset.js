@@ -1,5 +1,5 @@
 /**
- * Import ~/Downloads/medlens_large_dataset.xlsx (or path from argv[2])
+ * Import ~/Downloads/paxmed_large_dataset.xlsx (or path from argv[2])
  * into service_providers, skus, provider_skus, catalog_users,
  * then sync medicine SKUs into cities / pharmacies / medicines / pharmacy_prices
  * for the main compare UI.
@@ -17,7 +17,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 /** Deterministic UUID v4-style from string (for stable re-imports). */
 function stringToUuid(seed) {
-  const h = createHash("sha256").update(`medlens|${seed}`).digest();
+  const h = createHash("sha256").update(`paxmed|${seed}`).digest();
   const b = Buffer.from(h.subarray(0, 16));
   b[6] = (b[6] & 0x0f) | 0x40;
   b[8] = (b[8] & 0x3f) | 0x80;
@@ -70,11 +70,11 @@ function num(v, def = 0) {
 }
 
 async function main() {
-  const defaultPath = join(homedir(), "Downloads/medlens_large_dataset.xlsx");
+  const defaultPath = join(homedir(), "Downloads/paxmed_large_dataset.xlsx");
   const xlsxPath = process.argv[2] || defaultPath;
   if (!existsSync(xlsxPath)) {
     console.error(`File not found: ${xlsxPath}`);
-    console.error("Usage: node server/scripts/import-medlens-dataset.js [path/to/medlens_large_dataset.xlsx]");
+    console.error("Usage: node server/scripts/import-paxmed-dataset.js [path/to/paxmed_large_dataset.xlsx]");
     process.exit(1);
   }
 
@@ -230,14 +230,14 @@ async function main() {
         pid = existing.rows[0].id;
         await client.query(
           `UPDATE pharmacies SET address_line = COALESCE($1, address_line), pincode = COALESCE(NULLIF($2,''), pincode), chain = COALESCE(chain, $3) WHERE id = $4`,
-          [sp.address, pin, "MedLens dataset", pid]
+          [sp.address, pin, "PaxMed dataset", pid]
         );
       } else {
         const ins = await client.query(
           `INSERT INTO pharmacies (name, chain, city_id, address_line, pincode, lat, lng)
            VALUES ($1, $2, $3, $4, $5, $6, $7)
            RETURNING id`,
-          [sp.name, "MedLens dataset", cityId, sp.address, pin, lat, lng]
+          [sp.name, "PaxMed dataset", cityId, sp.address, pin, lat, lng]
         );
         pid = ins.rows[0].id;
         summary.pharmacies++;

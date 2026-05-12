@@ -2,8 +2,8 @@ import 'package:dio/dio.dart';
 
 import 'models.dart';
 
-class MedLensClient {
-  MedLensClient(this.dio);
+class PaxMedClient {
+  PaxMedClient(this.dio);
 
   final Dio dio;
 

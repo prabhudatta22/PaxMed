@@ -1,4 +1,4 @@
-# Load and stress testing (MedLens)
+# Load and stress testing (PaxMed)
 
 These tools hammer **real HTTP routes**:
 
@@ -38,7 +38,7 @@ export LOAD_TEST_TOKEN='your-secret'
 export BASE_URL=http://127.0.0.1:3000
 # ~10k “users” sustained on bookings (heavy — tune OS + Postgres too):
 export SEARCH_VUS=2000 BOOK_VUS=10000 DURATION=4m
-k6 run loadtest/k6/medlens-stress.js
+k6 run loadtest/k6/paxmed-stress.js
 ```
 
 - **`SEARCH_VUS`**: concurrency for labs + medicine/compare search (four scenarios total; see script).
@@ -62,5 +62,5 @@ BASE_URL=http://127.0.0.1:3000 LOAD_TEST_TOKEN=secret \
 
 ## NPM scripts
 
-- `npm run loadtest:k6` — wraps `k6 run loadtest/k6/medlens-stress.js`
+- `npm run loadtest:k6` — wraps `k6 run loadtest/k6/paxmed-stress.js`
 - `npm run loadtest:node` — runs `node loadtest/node-stress.mjs`

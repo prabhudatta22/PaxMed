@@ -1,6 +1,6 @@
-## MedLens Flutter app
+## PaxMed Flutter app
 
-This folder contains the Flutter UI for MedLens. It uses the existing Node/Express backend in this repo.
+This folder contains the Flutter UI for PaxMed. It uses the existing Node/Express backend in this repo.
 
 ### 1) Install Flutter
 
@@ -11,7 +11,7 @@ Follow Flutter docs for macOS and ensure `flutter` is on your PATH.
 From repo root:
 
 ```bash
-cd apps/flutter/medlens_app
+cd apps/flutter/paxmed_app
 flutter create .
 flutter pub get
 ```

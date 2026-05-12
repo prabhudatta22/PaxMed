@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
 
-import '../api/medlens_client.dart';
+import '../api/client.dart';
 import '../core/api_binding.dart';
 import '../state/cart_state.dart';
 import '../state/settings_state.dart';
@@ -63,7 +63,7 @@ class _LabsScreenState extends State<LabsScreen> {
     }
   }
 
-  MedLensClient _c() => context.read<ApiBinding>().client;
+  PaxMedClient _c() => context.read<ApiBinding>().client;
 
   void _debouncedSearch() {
     _debounce?.cancel();

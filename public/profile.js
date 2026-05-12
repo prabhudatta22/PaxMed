@@ -94,7 +94,7 @@ function applyProfileView(view) {
 
   const bc = $("profileBreadcrumb");
   if (bc) bc.textContent = `Account › ${VIEW_LABELS[v]}`;
-  document.title = `MedLens — ${VIEW_LABELS[v]}`;
+  document.title = `PaxMed — ${VIEW_LABELS[v]}`;
 
   const frame = $("profileSectionFrame");
   if (frame && isIframeEmbed) {
@@ -277,7 +277,7 @@ async function init() {
     } catch {
       return;
     }
-    if (ev.data?.type === "medlens-profile-embed-changed") {
+    if (ev.data?.type === "paxmed-profile-embed-changed") {
       void loadProfile();
     }
   });

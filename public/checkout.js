@@ -6,7 +6,7 @@ import {
   bucketKey,
   bucketTitle,
 } from "./cartStore.js";
-import { fetchAndCacheUser, loadCachedUser } from "./authProfile.js";
+import { fetchAndCacheUser, loadCachedUser, clearCachedUser } from "./authProfile.js";
 import {
   loadRazorpayScript,
   fetchRazorpayStatus,
@@ -15,8 +15,8 @@ import {
 } from "./diagnosticsRazorpay.js";
 
 const $ = (id) => document.getElementById(id);
-const ORDER_SUCCESS_KEY = "medlens_order_success_message_v1";
-const PRESCRIPTION_LS = "medlens_checkout_prescription_id";
+const ORDER_SUCCESS_KEY = "paxmed_order_success_message_v1";
+const PRESCRIPTION_LS = "paxmed_checkout_prescription_id";
 
 let rxCheckoutWired = false;
 let rxPreviewUrl = null;
@@ -177,8 +177,14 @@ function toStartOfLocalDayIso(dateInput) {
   return d.toISOString();
 }
 
-function onlyDiagnosticsItems(items) {
-  return (items || []).filter((x) => x && x.source === "diagnostics");
+function cleanCheckoutPin(raw) {
+  return String(raw ?? "")
+    .replace(/\D/g, "")
+    .slice(0, 6);
+}
+
+function isDiagnosticsEstimateLine(L) {
+  return Boolean(L?.source === "diagnostics" && (L.bookingSupported === false || L.booking_supported === false));
 }
 
 function syncDiagPrepaidHint() {
@@ -213,12 +219,21 @@ function wireCheckoutLoginLinks() {
   $("checkoutAuthLoginBtn")?.setAttribute("href", h);
 }
 
+/** Clears stale client session and redirects when an order API rejects auth. */
+function redirectToCheckoutLoginFromOrderResponse(res) {
+  if (res.status !== 401) return false;
+  clearCachedUser();
+  wireCheckoutLoginLinks();
+  window.location.assign(checkoutLoginHref());
+  return true;
+}
+
 function isCheckoutConsumer(user) {
   return Boolean(user && user.role !== "service_provider");
 }
 
 async function ensureLoggedInConsumer() {
-  const user = await fetchMe();
+  const user = await fetchAndCacheUser();
   if (isCheckoutConsumer(user)) return user;
   wireCheckoutLoginLinks();
   window.location.assign(checkoutLoginHref());
@@ -274,19 +289,37 @@ async function placeDiagnosticsOrder() {
   const btn = $("placeDiagnosticsBtn");
   if (!statusEl || !btn) return;
 
-  const user = await ensureLoggedInConsumer();
-  if (!user) return;
-
-  const lines = onlyDiagnosticsItems(getCartItems());
+  let lines = onlyDiagnosticsItems(getCartItems());
   if (!lines.length) {
     statusEl.textContent = "No diagnostics tests in cart.";
     return;
   }
 
-  const blocked = lines.filter((L) => L.bookingSupported === false || L.booking_supported === false);
-  if (blocked.length) {
-    const names = [...new Set(blocked.map((b) => b.vendorLabel || b.vendorKey || "vendor"))].join(", ");
-    statusEl.textContent = `Cannot checkout estimate-only diagnostics (${names}). Remove those lines or replace them using a Bookable vendor on Diagnostics.`;
+  const estimateLines = lines.filter(isDiagnosticsEstimateLine);
+  lines = lines.filter((L) => !isDiagnosticsEstimateLine(L));
+
+  if (estimateLines.length) {
+    removeLinesById(estimateLines.map((L) => L.lineId));
+    render();
+    if (!lines.length) {
+      statusEl.textContent =
+        "Removed benchmark-only diagnostics (shown for price compare, not booking). Go to Diagnostics, add rows labelled Bookable, then return here for Cash on collection.";
+      return;
+    }
+    statusEl.textContent = `Skipped ${estimateLines.length} benchmark/estimate vendor line(s); booking ${lines.length} bookable test line(s).`;
+  }
+
+  const vendorKeys = [...new Set(lines.map((L) => String(L.vendorKey || "").trim()).filter(Boolean))];
+  if (vendorKeys.length > 1) {
+    statusEl.textContent =
+      "Cart mixes diagnostics vendors. Remove extra vendors or place one booking per vendor (start with one provider).";
+    return;
+  }
+  const hasH = lines.some((L) => L.vendorKey === "healthians");
+  const hasCat = lines.some((L) => L.vendorKey === "paxmed_catalog");
+  if (hasH && hasCat) {
+    statusEl.textContent =
+      "Do not mix Healthians and catalogue diagnostics in one cart. Remove one vendor’s lines or book separately.";
     return;
   }
 
@@ -332,10 +365,16 @@ async function placeDiagnosticsOrder() {
   };
   if (prescId) payload.prescription_id = prescId;
 
+  const collectionPin = cleanCheckoutPin($("diagPincode")?.value || $("addrPin")?.value || "");
+  if (collectionPin) payload.collection_pincode = collectionPin;
+
   if (!payload.package_id || !payload.city || !Number.isFinite(payload.price_inr) || payload.price_inr <= 0) {
     statusEl.textContent = "Diagnostics cart item is incomplete. Re-add the test and retry.";
     return;
   }
+
+  const user = await ensureLoggedInConsumer();
+  if (!user) return;
 
   if (paymentType === "prepaid") {
     $("diagPaySuccess")?.classList.add("hidden");
@@ -363,7 +402,7 @@ async function placeDiagnosticsOrder() {
         amount: String(ord.amount),
         currency: ord.currency || "INR",
         order_id: ord.order_id,
-        name: "MedLens",
+        name: "PaxMed",
         description: `Diagnostics · ${packages.length} test(s)`,
         theme: { color: "#0f766e" },
         handler(response) {
@@ -385,6 +424,7 @@ async function placeDiagnosticsOrder() {
               });
               const data = await res.json().catch(() => ({}));
               if (!res.ok) {
+                if (redirectToCheckoutLoginFromOrderResponse(res)) return;
                 statusEl.textContent = data.error || `Booking failed (${res.status})`;
                 btn.disabled = false;
                 return;
@@ -444,6 +484,7 @@ async function placeDiagnosticsOrder() {
 
   btn.disabled = true;
   statusEl.textContent = "Booking diagnostics order…";
+  let navigatedAway = false;
   try {
     const res = await fetch("/api/orders/diagnostics", {
       method: "POST",
@@ -453,26 +494,33 @@ async function placeDiagnosticsOrder() {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
+      if (redirectToCheckoutLoginFromOrderResponse(res)) return;
       statusEl.textContent = data.error || `Diagnostics booking failed (${res.status})`;
-      btn.disabled = false;
       return;
     }
     removeLinesById(payload.cart_line_ids);
     const id = data?.order?.id;
+    if (id === undefined || id === null || id === "") {
+      statusEl.textContent = "Booking succeeded but order id was missing. Check Orders from the menu.";
+      return;
+    }
     try {
-      sessionStorage.setItem(ORDER_SUCCESS_KEY, "Successfully order placed");
+      sessionStorage.setItem(
+        ORDER_SUCCESS_KEY,
+        paymentType === "prepaid"
+          ? "Diagnostics booking confirmed (prepaid)"
+          : "Diagnostics booking confirmed — cash on collection",
+      );
     } catch {
       /* ignore */
     }
-    statusEl.textContent = "Successfully order placed. Redirecting to order details…";
-    setTimeout(() => {
-      window.location.assign(`/order.html?id=${encodeURIComponent(id)}`);
-    }, 700);
+    statusEl.textContent = "Opening your order…";
+    navigatedAway = true;
+    window.location.assign(`/order.html?id=${encodeURIComponent(String(id))}`);
   } catch (e) {
     statusEl.textContent = String(e?.message || e);
-    btn.disabled = false;
   } finally {
-    btn.disabled = false;
+    if (!navigatedAway) btn.disabled = false;
   }
 }
 
@@ -572,19 +620,29 @@ async function placeDeliveryOrder() {
   const btn = $("placeOrderBtn");
   if (!statusEl || !btn) return;
 
-  const user = await ensureLoggedInConsumer();
-  if (!user) return;
-
   const items = onlyLocalItems(getCartItems());
   if (!items.length) {
-    statusEl.textContent = "Your cart has no local pharmacy items (delivery MVP supports local items only).";
+    statusEl.textContent =
+      "Your cart has no local pharmacy items — use Add on a Nearby pharmacies or Online retailer row labelled local DB, then return here.";
     return;
   }
+
+  const user = await ensureLoggedInConsumer();
+  if (!user) return;
 
   const addr1 = $("addr1")?.value?.trim() || "";
   if (!addr1) {
     statusEl.textContent = "Address line is required.";
     return;
+  }
+
+  const paymentTypeEarly = $("deliveryPaymentType")?.value === "prepaid" ? "prepaid" : "cod";
+  if (paymentTypeEarly === "cod") {
+    const pin = cleanCheckoutPin($("addrPin")?.value || "");
+    if (pin.length !== 6) {
+      statusEl.textContent = "Cash on delivery requires a valid 6-digit PIN code.";
+      return;
+    }
   }
 
   const doseMap = collectDoseByLineId();
@@ -599,7 +657,7 @@ async function placeDeliveryOrder() {
       address_line1: addr1,
       landmark: $("landmark")?.value?.trim() || "",
       city: $("addrCity")?.value?.trim() || "",
-      pincode: $("addrPin")?.value?.trim() || "",
+      pincode: cleanCheckoutPin($("addrPin")?.value || ""),
     },
     items: items.map((L) => ({
       source: "local",
@@ -642,7 +700,7 @@ async function placeDeliveryOrder() {
         amount: String(ord.amount),
         currency: ord.currency || "INR",
         order_id: ord.order_id,
-        name: "MedLens",
+        name: "PaxMed",
         description: `Medicine delivery · ${items.length} line(s)`,
         theme: { color: "#0f766e" },
         handler(response) {
@@ -664,21 +722,24 @@ async function placeDeliveryOrder() {
               });
               const data = await res.json().catch(() => ({}));
               if (!res.ok) {
+                if (redirectToCheckoutLoginFromOrderResponse(res)) return;
                 statusEl.textContent = data.error || `Order failed (${res.status})`;
                 btn.disabled = false;
                 return;
               }
               const id = data.order?.id;
-              statusEl.innerHTML = `Order placed: <strong>#${escapeHtml(id)}</strong> (prepaid). <a href="/order.html?id=${encodeURIComponent(
-                id
-              )}">Track order</a>.`;
+              if (id === undefined || id === null || id === "") {
+                statusEl.textContent = "Payment verified but order id missing. Check Orders.";
+                btn.disabled = false;
+                return;
+              }
               removeLinesById(items.map((L) => L.lineId));
               try {
-                sessionStorage.setItem(ORDER_SUCCESS_KEY, "Order placed successfully");
+                sessionStorage.setItem(ORDER_SUCCESS_KEY, "Medicine order placed (prepaid)");
               } catch {
                 /* ignore */
               }
-              render();
+              window.location.assign(`/order.html?id=${encodeURIComponent(String(id))}`);
             } catch (e) {
               statusEl.textContent = String(e?.message || e);
             } finally {
@@ -714,6 +775,7 @@ async function placeDeliveryOrder() {
   btn.disabled = true;
   statusEl.textContent = "Placing order…";
 
+  let navigatedAway = false;
   try {
     const res = await fetch("/api/orders", {
       method: "POST",
@@ -723,25 +785,33 @@ async function placeDeliveryOrder() {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
+      if (redirectToCheckoutLoginFromOrderResponse(res)) return;
       statusEl.textContent = data.error || `Order failed (${res.status})`;
-      btn.disabled = false;
       return;
     }
     const id = data.order?.id;
-    statusEl.innerHTML = `Order placed: <strong>#${escapeHtml(id)}</strong>. <a href="/order.html?id=${encodeURIComponent(
-      id
-    )}">Track order</a>.`;
+    if (id === undefined || id === null || id === "") {
+      statusEl.textContent = "Order placed but we could not read the order id. Open Orders from the menu.";
+      return;
+    }
     removeLinesById(items.map((L) => L.lineId));
     try {
-      sessionStorage.setItem(ORDER_SUCCESS_KEY, "Order placed successfully");
+      sessionStorage.setItem(
+        ORDER_SUCCESS_KEY,
+        paymentType === "prepaid"
+          ? "Medicine order placed (prepaid)"
+          : "Medicine order placed — cash on delivery",
+      );
     } catch {
       /* ignore */
     }
-    render();
+    statusEl.textContent = "Order placed. Opening details…";
+    navigatedAway = true;
+    window.location.assign(`/order.html?id=${encodeURIComponent(String(id))}`);
   } catch (e) {
     statusEl.textContent = String(e?.message || e);
   } finally {
-    btn.disabled = false;
+    if (!navigatedAway) btn.disabled = false;
   }
 }
 
@@ -775,7 +845,11 @@ function render() {
         .map(
           (L) => `
         <tr>
-          <td>${escapeHtml(L.medicineLabel)}${L.strength ? ` <span class="muted">${escapeHtml(L.strength)}</span>` : ""}</td>
+          <td>${escapeHtml(L.medicineLabel)}${L.strength ? ` <span class="muted">${escapeHtml(L.strength)}</span>` : ""}${
+            L.source === "diagnostics" && isDiagnosticsEstimateLine(L)
+              ? ` <span class="pill pill-muted" title="Skipped at checkout — add a Bookable vendor on Diagnostics instead">Estimate</span>`
+              : ""
+          }</td>
           <td>
             ${
               L.source === "diagnostics"
@@ -863,7 +937,10 @@ function render() {
   });
 
   // Home delivery panel
-  renderDoseTable(onlyLocalItems(items));
+  const locals = onlyLocalItems(items);
+  const pob = $("placeOrderBtn");
+  if (pob) pob.disabled = locals.length === 0;
+  renderDoseTable(locals);
   const diagPanel = $("diagnosticsPanel");
   const diagDate = $("diagDate");
   const diagPay = $("diagPaymentType");
@@ -914,6 +991,16 @@ Promise.all([refreshAuthNav(), fetchMe()]).then(([, u]) => {
 });
 $("placeOrderBtn")?.addEventListener("click", () => placeDeliveryOrder());
 $("placeDiagnosticsBtn")?.addEventListener("click", () => placeDiagnosticsOrder());
+$("diagPincode")?.addEventListener("input", (e) => {
+  const el = e.target;
+  if (!el || el.type === undefined) return;
+  el.value = cleanCheckoutPin(el.value);
+});
+$("addrPin")?.addEventListener("input", (e) => {
+  const el = e.target;
+  if (!el) return;
+  el.value = cleanCheckoutPin(el.value);
+});
 $("diagPaymentType")?.addEventListener("change", syncDiagPrepaidHint);
 $("deliveryPaymentType")?.addEventListener("change", syncDeliveryPaymentHint);
 syncDiagPrepaidHint();

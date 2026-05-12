@@ -154,7 +154,7 @@ async function ingestLabPriceRows(client, rows, summary) {
     try {
       const { rows: trows } = await client.query(`SELECT 1 FROM lab_tests WHERE id = $1 LIMIT 1`, [r.test_id]);
       if (!trows.length) {
-        summary.errors.push({ row: r.rowNum, error: `Unknown test_id ${r.test_id} (use id from MedLens lab catalog)` });
+        summary.errors.push({ row: r.rowNum, error: `Unknown test_id ${r.test_id} (use id from PaxMed lab catalog)` });
         continue;
       }
 

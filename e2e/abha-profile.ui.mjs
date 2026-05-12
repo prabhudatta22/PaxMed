@@ -15,7 +15,7 @@ const projectRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 const PORT = Number(process.env.MEDLENS_TEST_PORT || 4022);
 const BASE = `http://127.0.0.1:${PORT}`;
 const DATABASE_URL =
-  process.env.DATABASE_URL || "postgresql://medlens:medlens@127.0.0.1:5432/medlens";
+  process.env.DATABASE_URL || "postgresql://paxmed:paxmed@127.0.0.1:5432/paxmed";
 
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));

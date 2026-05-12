@@ -54,7 +54,7 @@ function ingestSecretOk(req) {
 }
 
 /**
- * Labs / fulfilment POST a completed diagnostic PDF/image against a MedLens order id.
+ * Labs / fulfilment POST a completed diagnostic PDF/image against a PaxMed order id.
  */
 router.post("/lab-ingest", upload.single("file"), async (req, res) => {
   try {

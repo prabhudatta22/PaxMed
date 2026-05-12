@@ -95,7 +95,7 @@ class _LoginScreenState extends State<LoginScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const Text(
-                'Use the same OTP login flow as the MedLens web app. ',
+                'Use the same OTP login flow as the PaxMed web app. ',
                 style: TextStyle(fontSize: 13),
               ),
               const SizedBox(height: 12),

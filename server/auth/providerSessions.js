@@ -4,7 +4,7 @@ import { getRedis } from "./redisClient.js";
 const TTL_SECONDS = 5 * 60;
 
 function keyForSid(sid) {
-  return `medlens:sp:sid:${sid}`;
+  return `paxmed:sp:sid:${sid}`;
 }
 
 export async function createProviderSession({ providerUserId, username }) {

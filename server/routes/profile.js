@@ -173,7 +173,7 @@ router.get("/", async (req, res) => {
   try {
     diagnostic_reports = await listDiagnosticReportsForUser(pool, userId);
   } catch (e) {
-    console.error("MedLens: listDiagnosticReportsForUser:", e?.message || e);
+    console.error("PaxMed: listDiagnosticReportsForUser:", e?.message || e);
     diagnostic_reports_load_error =
       process.env.NODE_ENV === "production"
         ? "Could not load diagnostic reports (database issue). Confirm migrations ran against this DATABASE_URL."

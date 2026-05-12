@@ -10,7 +10,7 @@ function mapGenderToDb(g) {
 }
 
 /**
- * ABHA wins on conflict: overwrite MedLens user + default address from ABHA demographics.
+ * ABHA wins on conflict: overwrite PaxMed user + default address from ABHA demographics.
  */
 export async function applyAbhaDemographicsToUser(client, userId, demo) {
   const fullName = demo.full_name ? String(demo.full_name).trim() : null;
@@ -110,7 +110,7 @@ export async function buildAbhaPushPayload(pool, userId) {
 }
 
 /**
- * When ABHA is linked, push the latest MedLens profile (and default address) to ABDM.
+ * When ABHA is linked, push the latest PaxMed profile (and default address) to ABDM.
  * `overrides` are merged on top of the DB snapshot (e.g. immediately after a profile PUT).
  */
 export async function mergeAndPushAbhaForUser(pool, userId, overrides = {}) {
