@@ -4,24 +4,19 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>PaxMed — partner dashboard</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap"
-      rel="stylesheet"
-    />
+    <link rel="icon" href="/PaxMedLogo.png" type="image/png" />
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
     <div class="bg-grid"></div>
     <header class="header">
-      <div class="brand">
+      <a class="brand" href="/landing.html" style="text-decoration: none; color: inherit" aria-label="PaxMed home">
         <span class="logo" aria-hidden="true">◇</span>
         <div>
           <h1>Partner Dashboard</h1>
           <p class="tagline">Sales, revenue, profit — pharmacy view</p>
         </div>
-      </div>
+      </a>
       <p class="disclaimer">Use your partner API key. Data here is demo until real POS integration is added.</p>
     </header>
 
@@ -42,9 +37,9 @@
             <input id="to" type="date" />
           </label>
         </div>
-        <div style="margin-top: 0.75rem; display: flex; gap: 0.6rem; flex-wrap: wrap">
+        <div style="margin-top: 0.75rem; display: flex; gap: 1.125rem; flex-wrap: wrap; align-items: center">
           <button class="btn" id="load">Load dashboard</button>
-          <a class="btn" href="/" style="text-decoration: none; display: inline-block">Back</a>
+          <a class="btn" href="/index.html">Back</a>
         </div>
         <pre id="err" class="muted" style="margin-top: 0.8rem; white-space: pre-wrap"></pre>
       </section>

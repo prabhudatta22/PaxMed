@@ -54,6 +54,11 @@ if (loadTok) {
   app.use("/api", loadTestRoutes);
 }
 
+/** Marketing homepage (medicines compare stays at `/index.html`) */
+app.get("/", (_req, res) => {
+  res.sendFile(join(publicDir, "landing.html"));
+});
+
 app.use(express.static(publicDir));
 app.use("/api/geocode", geocodeRoutes);
 app.use("/api/catalog", catalogRoutes);
