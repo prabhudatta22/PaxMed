@@ -26,26 +26,42 @@ export async function processVerifiedRazorpayWebhook(body) {
   const payId = payEnt?.id != null ? String(payEnt.id).trim() : null;
   const orderEntId = payEnt?.order_id != null ? String(payEnt.order_id).trim() : null;
 
-  let insertId = null;
+  let eventRow = null;
   try {
     const { rows } = await pool.query(
       `INSERT INTO razorpay_webhook_events
          (razorpay_event_id, event_type, payment_id, order_entity_id, payload_json)
        VALUES ($1, $2, $3, $4, $5::jsonb)
        ON CONFLICT (razorpay_event_id) DO NOTHING
-       RETURNING id`,
+       RETURNING id, processed_ok, order_link_id`,
       [eventId, eventType, payId, orderEntId, safeJson(body)]
     );
     if (!rows.length) {
-      incMetric("webhook_duplicate");
-      logPayment("webhook_duplicate", { event_id: eventId, event_type: eventType });
-      return { ok: true, duplicate: true };
+      const existing = await pool.query(
+        `SELECT id, processed_ok, order_link_id
+           FROM razorpay_webhook_events
+          WHERE razorpay_event_id = $1
+          LIMIT 1`,
+        [eventId]
+      );
+      eventRow = existing.rows[0] || null;
+      if (eventRow?.processed_ok) {
+        incMetric("webhook_duplicate");
+        logPayment("webhook_duplicate", { event_id: eventId, event_type: eventType });
+        return { ok: true, duplicate: true, matched_order_id: eventRow.order_link_id ?? null };
+      }
+      logPayment("webhook_duplicate_retry", { event_id: eventId, event_type: eventType });
+    } else {
+      eventRow = rows[0];
     }
-    insertId = rows[0].id;
   } catch (e) {
     incMetric("webhook_insert_err");
     logPayment("webhook_insert_err", { message: e?.message });
     throw e;
+  }
+
+  if (!eventRow?.id) {
+    throw new Error("Webhook event row could not be loaded for processing");
   }
 
   let matchedOrderId = null;
@@ -67,7 +83,7 @@ export async function processVerifiedRazorpayWebhook(body) {
            order_link_id = COALESCE($3::integer, order_link_id),
            error_message = $4
      WHERE id = $1`,
-    [insertId, !errMsg, matchedOrderId, errMsg]
+    [eventRow.id, !errMsg, matchedOrderId, errMsg]
   );
 
   return { ok: !errMsg, matched_order_id: matchedOrderId, error: errMsg };
