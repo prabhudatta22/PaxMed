@@ -33,6 +33,14 @@ router.post("/", async (req, res) => {
 
   try {
     const out = await processVerifiedRazorpayWebhook(parsed);
+    if (!out?.ok) {
+      logPayment("webhook_retryable_failure", {
+        event_id: parsed?.id,
+        event_type: parsed?.event,
+        error: out?.error || out?.reason,
+      });
+      return res.status(500).json({ error: "Webhook processing failed" });
+    }
     return res.json({ received: true, ...out });
   } catch (e) {
     incMetric("webhook_insert_err");
