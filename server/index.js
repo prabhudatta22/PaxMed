@@ -25,6 +25,8 @@ import { attachUser } from "./auth/middleware.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const publicDir = join(__dirname, "..", "public");
+/** Only `GET /` may serve this file; medicines app stays at `/index.html`. */
+const landingHtmlPath = join(publicDir, "landing.html");
 
 const app = express();
 const port = Number(process.env.PORT) || 3000;
@@ -54,12 +56,17 @@ if (loadTok) {
   app.use("/api", loadTestRoutes);
 }
 
-/** Marketing homepage (medicines compare stays at `/index.html`) */
+/** Site root (`/`) serves only `public/landing.html` (never `index.html`). Medicines UI: `/index.html`. */
 app.get("/", (_req, res) => {
-  res.sendFile(join(publicDir, "landing.html"));
+  res.sendFile(landingHtmlPath);
 });
 
-app.use(express.static(publicDir));
+app.use(
+  express.static(publicDir, {
+    /** Root HTML is controlled by `GET /` above; do not auto-pick `index.html` for `/`. */
+    index: false,
+  })
+);
 app.use("/api/geocode", geocodeRoutes);
 app.use("/api/catalog", catalogRoutes);
 app.use("/api", api);
@@ -82,4 +89,5 @@ app.get("*", (_req, res) => {
 
 app.listen(port, () => {
   console.log(`PaxMed (India) http://localhost:${port}`);
+  console.log(`  GET /  → public/landing.html  |  GET /index.html  → medicines compare`);
 });
