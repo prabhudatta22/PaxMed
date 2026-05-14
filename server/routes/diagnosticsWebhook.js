@@ -55,6 +55,7 @@ router.post("/", async (req, res) => {
        AND (
          provider_order_ref = $1
         OR COALESCE(provider_payload::jsonb -> 'paxmed' ->> 'partner_booking_id', '') = $1
+        OR COALESCE(provider_payload::jsonb -> 'medlens' ->> 'partner_booking_id', '') = $1
        )
      ORDER BY created_at DESC
      LIMIT 20`,

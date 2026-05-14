@@ -36,7 +36,12 @@ function parsePayload(raw) {
  */
 export function extractDiagnosticsReportContext(order) {
   const p = parsePayload(order?.provider_payload);
-  const envelope = p?.paxmed && typeof p.paxmed === "object" ? p.paxmed : null;
+  const envelope =
+    p?.paxmed && typeof p.paxmed === "object"
+      ? p.paxmed
+      : p?.medlens && typeof p.medlens === "object"
+        ? p.medlens
+        : null;
   if (envelope && typeof envelope === "object") {
     return {
       partner_booking_id: envelope.partner_booking_id != null ? String(envelope.partner_booking_id) : null,
