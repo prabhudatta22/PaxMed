@@ -5,6 +5,7 @@ import {
   clearCart,
   bucketKey,
   bucketTitle,
+  diagnosticsVendorCanon,
 } from "./cartStore.js";
 import { fetchAndCacheUser, loadCachedUser, clearCachedUser } from "./authProfile.js";
 import {
@@ -309,17 +310,10 @@ async function placeDiagnosticsOrder() {
     statusEl.textContent = `Skipped ${estimateLines.length} benchmark/estimate vendor line(s); booking ${lines.length} bookable test line(s).`;
   }
 
-  const vendorKeys = [...new Set(lines.map((L) => String(L.vendorKey || "").trim()).filter(Boolean))];
+  const vendorKeys = [...new Set(lines.map((L) => diagnosticsVendorCanon(L.vendorKey)).filter(Boolean))];
   if (vendorKeys.length > 1) {
     statusEl.textContent =
       "Cart mixes diagnostics vendors. Remove extra vendors or place one booking per vendor (start with one provider).";
-    return;
-  }
-  const hasH = lines.some((L) => L.vendorKey === "healthians");
-  const hasCat = lines.some((L) => L.vendorKey === "paxmed_catalog");
-  if (hasH && hasCat) {
-    statusEl.textContent =
-      "Do not mix Healthians and catalogue diagnostics in one cart. Remove one vendor’s lines or book separately.";
     return;
   }
 

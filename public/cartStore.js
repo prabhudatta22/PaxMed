@@ -1,4 +1,12 @@
 export const STORAGE_KEY = "paxmed_multi_checkout_v1";
+
+/** Treat stub vs live API diagnostics vendors as one booking bucket (labs compare uses both keys per brand). */
+export function diagnosticsVendorCanon(vendorKey) {
+  const v = String(vendorKey ?? "").trim().toLowerCase();
+  if (v === "thyrocare_api" || v === "thyrocare") return "thyrocare";
+  if (v === "lucid_api" || v === "lucid") return "lucid";
+  return v;
+}
 const FALLBACK_SESSION_KEY = "paxmed_multi_checkout_session_v1";
 
 function safeParse(raw) {

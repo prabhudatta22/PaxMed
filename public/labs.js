@@ -1,4 +1,4 @@
-import { addCartLine, cartLineCount } from "./cartStore.js";
+import { addCartLine, cartLineCount, diagnosticsVendorCanon } from "./cartStore.js";
 import { clearCachedUser, fetchAndCacheUser, loadCachedUser } from "./authProfile.js";
 
 const $ = (id) => document.getElementById(id);
@@ -226,14 +226,18 @@ function openPackageModal(item) {
 }
 
 let pendingBookCtx = null;
-function openBookModal(ctx) {
-  if (ctx.bookingSupported === false) {
-    setStatus("That vendor listing is estimate-only and cannot be booked here yet.");
-    return;
-  }
+function openBookModal(ctx, { singleTest = true } = {}) {
   const m = bookModalEls();
   if (!m.wrap) return;
-  addSelectedPackage(ctx);
+  if (singleTest) {
+    selectedDiagPackages.clear();
+  } else {
+    const targetCanon = diagnosticsVendorCanon(ctx.vendorKey);
+    for (const [key, pkg] of [...selectedDiagPackages.entries()]) {
+      if (diagnosticsVendorCanon(pkg.vendorKey) !== targetCanon) selectedDiagPackages.delete(key);
+    }
+  }
+  addSelectedPackage({ ...ctx, bookingSupported: true });
   pendingBookCtx = ctx;
   const minDate = new Date();
   minDate.setDate(minDate.getDate() + 1);
@@ -297,15 +301,11 @@ function initBookModalHandlers() {
       if (m.hint) m.hint.textContent = "Select at least one test before booking.";
       return;
     }
-    const vendorKeys = [...new Set(selected.map((p) => String(p.vendorKey || "").trim()).filter(Boolean))];
+    const vendorKeys = [
+      ...new Set(selected.map((p) => diagnosticsVendorCanon(p.vendorKey)).filter(Boolean)),
+    ];
     if (vendorKeys.length > 1) {
       if (m.hint) m.hint.textContent = "Book one diagnostics vendor at a time. Remove other vendors from the list.";
-      return;
-    }
-    const hasH = selected.some((p) => p.vendorKey === "healthians");
-    const hasCat = selected.some((p) => p.vendorKey === "paxmed_catalog");
-    if (hasH && hasCat) {
-      if (m.hint) m.hint.textContent = "Do not mix Healthians and catalog packages in one booking. Remove one vendor.";
       return;
     }
     const scheduledForIso = toStartOfLocalDayIso(m.dateInput?.value);
@@ -987,15 +987,10 @@ function render(groups, stats) {
       const mrpInr = mrpRaw === "" || mrpRaw == null ? null : Number(mrpRaw);
       const vendorKey = btn.getAttribute("data-vendor-key") || "";
       const vendorLabel = btn.getAttribute("data-vendor-label") || vendorKey;
-      const bookingSupported = btn.getAttribute("data-booking") === "1";
       if (!city || !packageId || !packageName || !Number.isFinite(priceInr)) {
         setStatus(
           "Cannot start booking: choose a city, run Compare prices, then pick a row that shows a price.",
         );
-        return;
-      }
-      if (!bookingSupported) {
-        setStatus("That vendor row is estimate-only and cannot be booked from this table.");
         return;
       }
       if (!currentUser) {
@@ -1003,7 +998,10 @@ function render(groups, stats) {
         window.location.assign(`/login.html?returnTo=${encodeURIComponent("/labs.html")}`);
         return;
       }
-      openBookModal({ city, packageId, dealId, packageName, priceInr, mrpInr, vendorKey, vendorLabel, bookingSupported });
+      openBookModal(
+        { city, packageId, dealId, packageName, priceInr, mrpInr, vendorKey, vendorLabel, bookingSupported: true },
+        { singleTest: true },
+      );
     });
   });
 

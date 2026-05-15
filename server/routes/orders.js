@@ -261,6 +261,16 @@ function normalizeDiagnosticsPackages(body) {
 function useHealthiansPartnerApiForPackages(partnerEnabled, packages) {
   if (!partnerEnabled) return false;
   for (const p of packages) {
+    const pid = String(p?.package_id || "").trim().toLowerCase();
+    const did = String(p?.deal_id || "").trim().toLowerCase();
+    if (
+      /^stub:/.test(pid) ||
+      /^stub:/.test(did) ||
+      /^ext-/.test(pid) ||
+      /^ext-/.test(did)
+    ) {
+      return false;
+    }
     const vk = String(p?.vendor_key || "").trim().toLowerCase();
     if (vk && vk !== "healthians") return false;
   }

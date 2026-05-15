@@ -159,6 +159,20 @@ function dedupeOffers(list) {
   return out;
 }
 
+/** Stub vs API share a consumer brand label; skip synthetic stub row if we already surface that vendor for the grouping key. */
+function hasBrandOfferForGrouping(items, stubVendorKey, groupingKeyNorm) {
+  const g = String(groupingKeyNorm || "").trim();
+  if (!g) return false;
+  for (const x of items) {
+    const xv = String(x.vendor_key || "");
+    let same = xv === stubVendorKey;
+    if (stubVendorKey === "thyrocare") same = xv === "thyrocare" || xv === "thyrocare_api";
+    if (stubVendorKey === "lucid") same = xv === "lucid" || xv === "lucid_api";
+    if (same && normalizeDiagGroupingKey(x.heading) === g) return true;
+  }
+  return false;
+}
+
 async function loadLocalLabOfferRows(pool, { q, citySlug, category }) {
   const like = `%${q.toLowerCase()}%`;
   const params = [like, citySlug];
@@ -350,7 +364,7 @@ export async function labsCompareBundles(pool, p) {
     ];
     for (const [gk, base] of baseKeys.entries()) {
       for (const [vk, label] of stubPairs) {
-        if ([...items].some((x) => x.vendor_key === vk && normalizeDiagGroupingKey(x.heading) === gk)) continue;
+        if (hasBrandOfferForGrouping(items, vk, gk)) continue;
         const jitter = stubPriceFromBase(base, vk, gk);
         if (jitter == null) continue;
         const headingHuman = [...items].find((x) => normalizeDiagGroupingKey(x.heading) === gk)?.heading || gk;
