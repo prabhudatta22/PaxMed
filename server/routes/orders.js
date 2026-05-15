@@ -218,6 +218,7 @@ function parseScheduledFor(value) {
 }
 
 function normalizeDiagnosticsPackages(body) {
+  const defaultVendorKey = String(body?.vendor_key || "").trim().toLowerCase();
   const raw = Array.isArray(body?.packages) && body.packages.length
     ? body.packages
     : [
@@ -228,6 +229,7 @@ function normalizeDiagnosticsPackages(body) {
           city: body?.city || "",
           price_inr: body?.price_inr,
           mrp_inr: body?.mrp_inr,
+          vendor_key: body?.vendor_key,
         },
       ];
   const out = [];
@@ -238,6 +240,7 @@ function normalizeDiagnosticsPackages(body) {
     const city = String(p?.city || body?.city || "").trim().toLowerCase();
     const priceInr = Number(p?.price_inr);
     const mrpInr = p?.mrp_inr == null || p?.mrp_inr === "" ? null : Number(p.mrp_inr);
+    const vendorKeyRaw = String(p?.vendor_key || defaultVendorKey || "").trim().toLowerCase();
     if (!packageId || !dealId || !packageName || !city || !Number.isFinite(priceInr) || priceInr <= 0) {
       throw new Error("Each package needs package_id, deal_id, package_name, city, and valid price_inr");
     }
@@ -248,9 +251,26 @@ function normalizeDiagnosticsPackages(body) {
       city,
       price_inr: priceInr,
       mrp_inr: Number.isFinite(mrpInr) ? mrpInr : null,
+      vendor_key: vendorKeyRaw || "",
     });
   }
   return out;
+}
+
+/** Uses Healthians B2B APIs only when every line is Partner Healthians SKU (missing vendor_key = legacy client, treated as Healthians). */
+function useHealthiansPartnerApiForPackages(partnerEnabled, packages) {
+  if (!partnerEnabled) return false;
+  for (const p of packages) {
+    const vk = String(p?.vendor_key || "").trim().toLowerCase();
+    if (vk && vk !== "healthians") return false;
+  }
+  return true;
+}
+
+function storedDiagnosticsProviderName(usePartnerApi, primaryVendorKey) {
+  if (usePartnerApi) return "healthians";
+  const v = String(primaryVendorKey || "").trim().toLowerCase().replace(/_/g, "-");
+  return v || "paxmed-local";
 }
 
 function sanitizePaymentMeta(meta) {
@@ -719,8 +739,11 @@ router.post("/diagnostics", async (req, res) => {
     return res.status(400).json({ error: e?.message || "Invalid prescription" });
   }
 
+  const usePartnerApi = useHealthiansPartnerApiForPackages(partnerEnabled, packages);
+  const storedProviderName = storedDiagnosticsProviderName(usePartnerApi, primary.vendor_key);
+
   let providerBooking;
-  if (partnerEnabled) {
+  if (usePartnerApi) {
     try {
       providerBooking = await createPartnerDiagnosticsBooking({
         packageItems: packages.map((p) => ({
@@ -758,6 +781,9 @@ router.post("/diagnostics", async (req, res) => {
     }
   } else {
     const localRef = `LOCAL-${Date.now()}`;
+    const localNote = partnerEnabled
+      ? "PaxMed-confirmed request (catalog or non-Healthians vendor; not sent to Healthians B2B booking API)"
+      : "Partner integration is disabled";
     providerBooking = {
       booking_ref: localRef,
       vendor_booking_id: localRef,
@@ -765,7 +791,7 @@ router.post("/diagnostics", async (req, res) => {
       vendor_customer_id: null,
       slot: null,
       freeze_ref: null,
-      provider_response: { mode: "local_fallback", note: "Partner integration is disabled" },
+      provider_response: { mode: "local_fallback", note: localNote, vendor_key: primary.vendor_key || null },
     };
   }
 
@@ -800,7 +826,7 @@ router.post("/diagnostics", async (req, res) => {
           userId,
           scheduledIso,
           bookingAddress.id,
-          partnerEnabled ? "healthians" : "paxmed-local",
+          storedProviderName,
           providerBooking.booking_ref || null,
           JSON.stringify(diagnosticsPayloadEnvelope),
           `Diagnostics package booking in ${city} (${paymentType.toUpperCase()}) · ${packages.length} test(s)`,
@@ -835,6 +861,7 @@ router.post("/diagnostics", async (req, res) => {
             package_id: pkg.package_id,
             deal_id: pkg.deal_id,
             city: pkg.city,
+            vendor_key: pkg.vendor_key || null,
             patient_name: patientName,
             patient_age: Number.isFinite(patientAge) ? patientAge : null,
             patient_gender: patientGender,
@@ -852,9 +879,13 @@ router.post("/diagnostics", async (req, res) => {
        VALUES ($1, 'confirmed', $2)`,
       [
         order.id,
-        providerBooking.booking_ref
-          ? `Partner booking confirmed (${packages.length} test(s)). Ref: ${providerBooking.booking_ref}`
-          : `Partner booking confirmed (${packages.length} test(s)).`,
+        usePartnerApi
+          ? providerBooking.booking_ref
+            ? `Healthians booking confirmed (${packages.length} test(s)). Ref: ${providerBooking.booking_ref}`
+            : `Healthians booking confirmed (${packages.length} test(s)).`
+          : providerBooking.booking_ref
+            ? `Diagnostics booking confirmed (${packages.length} test(s)). PaxMed ref: ${providerBooking.booking_ref}`
+            : `Diagnostics booking confirmed (${packages.length} test(s)).`,
       ]
     );
     const reminderAt = await createDiagnosticReminder({

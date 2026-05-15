@@ -322,6 +322,7 @@ function initBookModalHandlers() {
       city: selected[0].city,
       price_inr: selected[0].priceInr,
       mrp_inr: Number.isFinite(selected[0].mrpInr) ? selected[0].mrpInr : null,
+      vendor_key: selected[0].vendorKey || "",
       packages: selected.map((p) => ({
         package_id: p.packageId,
         deal_id: p.dealId,
@@ -329,12 +330,13 @@ function initBookModalHandlers() {
         city: p.city,
         price_inr: p.priceInr,
         mrp_inr: Number.isFinite(p.mrpInr) ? p.mrpInr : null,
+        vendor_key: p.vendorKey || "",
       })),
       payment_type: m.paymentSelect?.value || "cod",
       scheduled_for: scheduledForIso,
       collection_pincode: cleanPincode($("labPincode")?.value || ""),
     };
-    if (statusEl) statusEl.textContent = "Booking package with diagnostics partner…";
+    if (statusEl) statusEl.textContent = "Confirming your booking…";
     try {
       if (bookingPayload.payment_type === "prepaid") {
         localStorage.setItem(DIAG_PREPAID_KEY, JSON.stringify(bookingPayload));
@@ -993,7 +995,7 @@ function render(groups, stats) {
         return;
       }
       if (!bookingSupported) {
-        setStatus("That vendor row is estimate-only — add Healthians catalog (or catalog when partner is off).");
+        setStatus("That vendor row is estimate-only and cannot be booked from this table.");
         return;
       }
       if (!currentUser) {
@@ -1430,7 +1432,7 @@ function initLabsDiagnosticsCompareBulk() {
     });
     refreshCartBadge();
     setStatus(
-      `Added ${added} diagnostics offer row(s). Cart quantity total: ${cartLineCount()} — remove estimate-only vendors before checkout if needed.`,
+      `Added ${added} diagnostics offer row(s). Cart quantity total: ${cartLineCount()} — compare-only (Estimate) rows are skipped at checkout.`,
     );
     selectedOfferPickKeys.clear();
     rows.forEach((cb) => {

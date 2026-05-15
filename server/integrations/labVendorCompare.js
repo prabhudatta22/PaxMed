@@ -87,9 +87,10 @@ async function fetchQuotesFromConfigurableVendor({ baseEnv, bearerEnv, vendorKey
       return decorateOffer(rowCoreFromParts({ heading, sub: "", price, mrp, packageId: pid, dealId: pid }), {
         vendor_key: vendorKey,
         vendor_label: vendorLabel,
-        booking_supported: false,
+        booking_supported: true,
         data_mode: "partner_api_exploratory",
-        vendor_note: "Partner search returned rows; enable booking after order API mapping is certified.",
+        vendor_note:
+          "Live quote preview; book via PaxMed as a confirmed request (vendor order API not wired to this flow yet).",
       });
     })
       .filter(Boolean);
@@ -229,8 +230,8 @@ function offersIntoGroups(offers) {
  */
 export async function labsCompareBundles(pool, p) {
   const partnerEnabled = isDiagnosticsPartnerEnabled();
-  /** When Healthians APIs are enabled, Mongo-style local rows are illustrative next to contractual partner SKUs only. */
-  const catalogBookingOk = !partnerEnabled;
+  /** Catalog rows remain bookable: server routes them to PaxMed-confirmed orders, not Healthians deal IDs when partner APIs are on. */
+  const catalogBookingOk = true;
   const items = [];
 
   if (partnerEnabled) {
@@ -303,7 +304,9 @@ export async function labsCompareBundles(pool, p) {
           vendor_label: String(r.lab_name || "PaxMed catalog"),
           booking_supported: catalogBookingOk,
           data_mode: "local_catalog",
-          vendor_note: partnerEnabled ? "Catalog price for transparency; bookings use contracted partner labs when enabled." : null,
+          vendor_note: partnerEnabled
+            ? "Book via PaxMed; confirmed as our order (catalog SKU, separate from Healthians B2B slot booking)."
+            : null,
         },
       ),
     );
@@ -367,9 +370,10 @@ export async function labsCompareBundles(pool, p) {
             {
               vendor_key: vk,
               vendor_label: label,
-              booking_supported: false,
+              booking_supported: true,
               data_mode: "illustrative_vendor_stub",
-              vendor_note: "Estimate for UI comparison; connect THYROCARE_/LUCID_ partner env for live prices or disable DIAG_VENDOR_STUB_QUOTES.",
+              vendor_note:
+                "Benchmark quote; you can still place a PaxMed booking — ops will align with the selected lab/vendor.",
             },
           ),
         );

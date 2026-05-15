@@ -303,7 +303,7 @@ async function placeDiagnosticsOrder() {
     render();
     if (!lines.length) {
       statusEl.textContent =
-        "Removed benchmark-only diagnostics (shown for price compare, not booking). Go to Diagnostics, add rows labelled Bookable, then return here for Cash on collection.";
+        "Removed diagnostics rows labelled Estimate (compare-only). Add Bookable offers from Diagnostics, then return.";
       return;
     }
     statusEl.textContent = `Skipped ${estimateLines.length} benchmark/estimate vendor line(s); booking ${lines.length} bookable test line(s).`;
@@ -339,6 +339,7 @@ async function placeDiagnosticsOrder() {
   const packages = [];
   lines.forEach((L) => {
     const qty = Math.max(1, Number(L.quantity) || 1);
+    const vk = String(L.vendorKey || "").trim().toLowerCase();
     for (let i = 0; i < qty; i += 1) {
       packages.push({
         package_id: String(L.packageId || ""),
@@ -347,6 +348,7 @@ async function placeDiagnosticsOrder() {
         city: String(L.city || ""),
         price_inr: Number(L.unitPriceInr) || 0,
         mrp_inr: L.mrpInr == null ? null : Number(L.mrpInr),
+        vendor_key: vk,
       });
     }
   });
@@ -358,6 +360,7 @@ async function placeDiagnosticsOrder() {
     city: packages[0].city,
     price_inr: packages[0].price_inr,
     mrp_inr: packages[0].mrp_inr,
+    vendor_key: packages[0].vendor_key || "",
     packages,
     payment_type: paymentType,
     scheduled_for: scheduledForIso,
