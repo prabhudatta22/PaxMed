@@ -28,6 +28,9 @@ let selectedOnlineOffer = null;
 /** @type {AbortController | null} */
 let compareAbort = null;
 
+/** @type {AbortController | null} */
+let rxReviewBatchAbort = null;
+
 let liveQuery = "";
 
 const GEO_STORAGE_KEY = "paxmed_geo_location_v1";
@@ -487,12 +490,403 @@ function renderRecentChips() {
   host.appendChild(wrap);
 }
 
+function medicineLabelFromMatch(m) {
+  if (!m) return "";
+  const parts = [m.display_name, m.strength].map((x) => String(x || "").trim()).filter(Boolean);
+  return parts.join(" ").trim();
+}
+
+async function normalizeMedicineSearchQuery(rawQ) {
+  let q = String(rawQ ?? "").trim();
+  if (!q) return "";
+  if (q.length >= NORMALIZE_MIN_LEN) {
+    try {
+      const normRes = await fetch(`/api/normalize?q=${encodeURIComponent(q)}`);
+      const norm = await normRes.json().catch(() => null);
+      if (norm?.normalized && typeof norm.normalized === "string") {
+        const nq = norm.normalized.trim();
+        if (nq) q = nq;
+      }
+    } catch {
+      /* ignore normalization failures */
+    }
+  }
+  return q;
+}
+
+async function fetchMedicineCompareBundle(rawQuery, signal) {
+  const q = await normalizeMedicineSearchQuery(rawQuery);
+  if (!q) return { q: "", shaped: null, localOffers: [] };
+
+  const city = $("city")?.value || "";
+  const pin = getComparePincode();
+  const pinParam = pin ? `&pincode=${encodeURIComponent(pin)}` : "";
+  const compareExtras = getMedicineCompareGeoAndRankQuery();
+  const dbRetailersUrl = `/api/compare/by-pincode?q=${encodeURIComponent(q)}&city=${encodeURIComponent(city)}${pinParam}${compareExtras}`;
+  const localUrl = `/api/compare/search?q=${encodeURIComponent(q)}&city=${encodeURIComponent(city)}${compareExtras}`;
+
+  const [dbRes, localRes] = await Promise.all([fetch(dbRetailersUrl, { signal }), fetch(localUrl, { signal })]);
+
+  if (signal.aborted) return { q, shaped: null, localOffers: [] };
+
+  let shaped = null;
+  if (dbRes.ok) {
+    const dbData = await dbRes.json().catch(() => ({}));
+    if (signal.aborted) return { q, shaped: null, localOffers: [] };
+    shaped = dbData.source === "db" ? dbCompareResponseToOnlineShape(dbData) : dbData;
+  }
+
+  let localOffers = [];
+  if (localRes.ok) {
+    const localData = await localRes.json().catch(() => ({}));
+    if (!signal.aborted) localOffers = localData.offers || [];
+  }
+
+  return { q, shaped, localOffers };
+}
+
+function cheapestLocalDemoOffer(offers) {
+  let best = null;
+  let bestP = Infinity;
+  for (const o of offers || []) {
+    const p = Number(o.price_inr);
+    if (!Number.isFinite(p)) continue;
+    if (p < bestP) {
+      bestP = p;
+      best = o;
+    }
+  }
+  return best;
+}
+
+/**
+ * Mirrors manual “Add”: demo local pharmacies first, then pilot DB pharmacies, then online retailers.
+ */
+function addCartLineFromMedicineLookup(localOffers, shaped, queryForCart, qty) {
+  const citySlug = $("city")?.value || "";
+  const qwant = Math.max(1, Math.floor(Number(qty) || 1));
+
+  const lo = cheapestLocalDemoOffer(localOffers || []);
+  if (lo && Number.isFinite(Number(lo.price_inr))) {
+    const mapsQuery = [lo.address_line, lo.pincode, lo.city_name, lo.pharmacy_name].filter(Boolean).join(" ");
+    const checkoutUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapsQuery)}`;
+    addCartLine({
+      source: "local",
+      medicineId: lo.medicine_id,
+      medicineLabel: lo.display_name,
+      strength: lo.strength,
+      unitPriceInr: Number(lo.price_inr),
+      mrpInr: lo.mrp_inr != null ? Number(lo.mrp_inr) : null,
+      pharmacyId: lo.pharmacy_id,
+      pharmacyName: lo.pharmacy_name,
+      pharmacyAddress: lo.address_line,
+      pharmacyPincode: lo.pincode,
+      citySlug,
+      checkoutUrl,
+      quantity: qwant,
+    });
+    return true;
+  }
+
+  const providers = shaped?.providers || [];
+
+  /** @type {typeof providers[number] | null} */
+  let bestPilot = null;
+  let bestPilotP = Infinity;
+  for (const p of providers) {
+    if (!p.ok || p.data_mode !== "local_db") continue;
+    const checkoutUrl = p.search_url || p.website;
+    if (!checkoutUrl) continue;
+    const pr = Number(p.price_inr);
+    if (!Number.isFinite(pr)) continue;
+    if (pr < bestPilotP) {
+      bestPilotP = pr;
+      bestPilot = p;
+    }
+  }
+  if (!bestPilot) {
+    for (const p of providers) {
+      if (!p.ok || p.data_mode !== "local_db") continue;
+      const checkoutUrl = p.search_url || p.website;
+      if (!checkoutUrl) continue;
+      bestPilot = p;
+      break;
+    }
+  }
+  if (bestPilot) {
+    const checkoutUrl = bestPilot.search_url || bestPilot.website;
+    if (!checkoutUrl) return false;
+    addCartLine({
+      source: "local",
+      medicineId: bestPilot.medicine_id,
+      medicineLabel: bestPilot.display_name,
+      strength: bestPilot.strength || "",
+      unitPriceInr: bestPilot.price_inr != null ? Number(bestPilot.price_inr) : 0,
+      mrpInr: bestPilot.mrp_inr != null ? Number(bestPilot.mrp_inr) : null,
+      pharmacyId: bestPilot.pharmacy_id,
+      pharmacyName: bestPilot.pharmacy_name,
+      pharmacyAddress: bestPilot.address_line,
+      pharmacyPincode: bestPilot.pincode,
+      citySlug,
+      checkoutUrl,
+      quantity: qwant,
+    });
+    return true;
+  }
+
+  /** @type {typeof providers[number] | null} */
+  let bestRetail = null;
+  let bestRetailP = Infinity;
+  for (const p of providers) {
+    if (!p.ok || p.data_mode === "local_db") continue;
+    const checkoutUrl = p.search_url || p.website;
+    if (!checkoutUrl) continue;
+    const pr = p.price_inr != null ? Number(p.price_inr) : NaN;
+    if (!Number.isFinite(pr)) continue;
+    if (pr < bestRetailP) {
+      bestRetailP = pr;
+      bestRetail = p;
+    }
+  }
+  if (!bestRetail) {
+    for (const p of providers) {
+      if (!p.ok || p.data_mode === "local_db") continue;
+      const checkoutUrl = p.search_url || p.website;
+      if (!checkoutUrl) continue;
+      bestRetail = p;
+      break;
+    }
+  }
+  if (!bestRetail) return false;
+
+  const checkoutUrl = bestRetail.search_url || bestRetail.website;
+  if (!checkoutUrl) return false;
+  const label = (bestRetail.product_title || queryForCart || "").trim();
+  addCartLine({
+    source: "online",
+    medicineId: 0,
+    medicineLabel: label,
+    strength: "",
+    searchQuery: queryForCart,
+    unitPriceInr: bestRetail.price_inr != null ? Number(bestRetail.price_inr) : 0,
+    mrpInr: bestRetail.mrp_inr != null ? Number(bestRetail.mrp_inr) : null,
+    onlineProviderId: bestRetail.provider_id,
+    onlineLabel: bestRetail.label,
+    checkoutUrl,
+    quantity: qwant,
+  });
+  return true;
+}
+
+function appendRxReviewRow(rowsHost, name, qty) {
+  const row = document.createElement("div");
+  row.className = "rx-review-row";
+  row.innerHTML = `
+    <label><span>Medicine</span><input type="text" class="rx-row-name" autocomplete="off" spellcheck="false" /></label>
+    <label><span>Qty</span><input type="number" class="rx-row-qty" min="1" step="1" /></label>
+    <button type="button" class="btn btn-sm btn-ghost rx-row-remove">Remove</button>`;
+  const nameInp = row.querySelector(".rx-row-name");
+  const qtyInp = row.querySelector(".rx-row-qty");
+  if (nameInp) nameInp.value = name;
+  if (qtyInp) qtyInp.value = String(Math.max(1, Math.floor(Number(qty) || 1)));
+  row.querySelector(".rx-row-remove")?.addEventListener("click", () => {
+    const siblings = rowsHost.querySelectorAll(".rx-review-row");
+    if (siblings.length <= 1) return;
+    row.remove();
+  });
+  rowsHost.appendChild(row);
+}
+
+function closeRxReviewModal() {
+  if (rxReviewBatchAbort) {
+    rxReviewBatchAbort.abort();
+    rxReviewBatchAbort = null;
+  }
+  const modal = $("rxReviewModal");
+  if (modal) modal.classList.add("hidden");
+  const busy = $("rxReviewBusy");
+  const err = $("rxReviewError");
+  const confirmBtn = $("rxReviewConfirm");
+  if (busy) {
+    busy.classList.add("hidden");
+    busy.textContent = "";
+  }
+  if (err) {
+    err.classList.add("hidden");
+    err.textContent = "";
+  }
+  if (confirmBtn) confirmBtn.disabled = false;
+}
+
+function openRxReviewModalAfterOcr(ocrText, matches) {
+  const modal = $("rxReviewModal");
+  const rowsEl = $("rxReviewRows");
+  const introEl = $("rxReviewIntro");
+  const ocrWrap = $("rxReviewOcrWrap");
+  const ocrPre = $("rxReviewOcrText");
+  if (!modal || !rowsEl || !introEl) return;
+
+  if (rxReviewBatchAbort) {
+    rxReviewBatchAbort.abort();
+    rxReviewBatchAbort = null;
+  }
+
+  rowsEl.innerHTML = "";
+  const list = Array.isArray(matches) ? matches : [];
+
+  if (list.length > 0) {
+    introEl.textContent =
+      `${list.length} medicine(s) from your upload. Adjust names if needed—we search using your PIN and city settings, pick the cheapest available listing per line, then add it to cart.`;
+    for (const m of list) {
+      appendRxReviewRow(rowsEl, medicineLabelFromMatch(m), 1);
+    }
+  } else {
+    introEl.textContent =
+      "We could not confidently match catalogue medicines from this scan. Enter each medicine below (printed text works best) or tune the OCR text references in “Show extracted text”.";
+    appendRxReviewRow(rowsEl, "", 1);
+  }
+
+  const t = String(ocrText || "").trim();
+  if (ocrWrap && ocrPre) {
+    if (t) {
+      ocrWrap.classList.remove("hidden");
+      ocrPre.textContent = t;
+    } else {
+      ocrWrap.classList.add("hidden");
+      ocrPre.textContent = "";
+    }
+  }
+
+  modal.classList.remove("hidden");
+  const focusRow = rowsEl.querySelector(".rx-row-name");
+  if (focusRow && typeof focusRow.focus === "function") focusRow.focus();
+}
+
+async function confirmRxReviewAndAddToCart() {
+  const rowsHost = $("rxReviewRows");
+  const busy = $("rxReviewBusy");
+  const errEl = $("rxReviewError");
+  const confirmBtn = $("rxReviewConfirm");
+  if (!rowsHost || !busy || !errEl || !confirmBtn) return;
+
+  errEl.classList.add("hidden");
+  errEl.textContent = "";
+
+  /** @type {{ name: string, qty: number }[]} */
+  const entries = [];
+  for (const row of rowsHost.querySelectorAll(".rx-review-row")) {
+    const name = row.querySelector(".rx-row-name")?.value?.trim() || "";
+    const qtyRaw = row.querySelector(".rx-row-qty")?.value;
+    const qty = Math.max(1, Math.floor(Number(qtyRaw) || 1));
+    if (name) entries.push({ name, qty });
+  }
+  if (!entries.length) {
+    errEl.textContent = "Enter at least one medicine name.";
+    errEl.classList.remove("hidden");
+    return;
+  }
+
+  const ac = new AbortController();
+  rxReviewBatchAbort = ac;
+  confirmBtn.disabled = true;
+  busy.textContent = `Adding items (0/${entries.length})…`;
+  busy.classList.remove("hidden");
+
+  const skipped = [];
+  const successfulQueries = [];
+
+  try {
+    for (let i = 0; i < entries.length; i++) {
+      const { name, qty } = entries[i];
+      busy.textContent = `Searching (${i + 1}/${entries.length}): ${name}…`;
+      try {
+        const { q, shaped, localOffers } = await fetchMedicineCompareBundle(name, ac.signal);
+        if (ac.signal.aborted) return;
+        if (!q || q.length < MIN_QUERY_LEN) {
+          skipped.push(`${name}: need at least ${MIN_QUERY_LEN} characters after normalization.`);
+          continue;
+        }
+        const ok = addCartLineFromMedicineLookup(localOffers, shaped, q, qty);
+        if (ok) successfulQueries.push(q);
+        else skipped.push(`${name}: no price listing for your city/PIN combo.`);
+      } catch (e) {
+        if (e?.name === "AbortError") return;
+        skipped.push(`${name}: ${String(e?.message || e)}`);
+      }
+    }
+  } finally {
+    busy.classList.add("hidden");
+    busy.textContent = "";
+    confirmBtn.disabled = false;
+    rxReviewBatchAbort = null;
+  }
+
+  if (ac.signal.aborted) return;
+
+  refreshCartBadge();
+  const statusRx = $("rxStatus");
+  const addedCount = successfulQueries.length;
+  if (statusRx) {
+    if (skipped.length === 0) {
+      statusRx.textContent =
+        addedCount === 1
+          ? "Added the prescription item to cart. Open Cart to finish checkout."
+          : `Added ${addedCount} prescription items to cart. Open Cart to finish checkout.`;
+    } else {
+      statusRx.textContent =
+        addedCount > 0
+          ? `Added ${addedCount} item(s); ${skipped.length} could not be matched. ${skipped.slice(0, 2).join(" ")}`
+          : `No items added. ${skipped.slice(0, 2).join(" ")}${skipped.length > 2 ? " …" : ""}`;
+    }
+  }
+
+  closeRxReviewModal();
+
+  const lastQ = successfulQueries.length ? successfulQueries[successfulQueries.length - 1] : null;
+  if (lastQ) {
+    const qEl = $("q");
+    if (qEl) {
+      closeSuggestions?.();
+      qEl.value = lastQ;
+      runRealtimeSearch();
+    }
+  }
+}
+
+function initRxReviewModal() {
+  const modal = $("rxReviewModal");
+  if (!modal) return;
+
+  modal.addEventListener("click", (ev) => {
+    if ((ev.target && ev.target.closest && ev.target.closest("[data-rx-dismiss]"))) {
+      closeRxReviewModal();
+    }
+  });
+
+  document.addEventListener("keydown", (ev) => {
+    if (ev.key !== "Escape") return;
+    if (modal.classList.contains("hidden")) return;
+    closeRxReviewModal();
+  });
+
+  $("rxReviewAddRow")?.addEventListener("click", () => {
+    const wrap = $("rxReviewRows");
+    if (!wrap) return;
+    appendRxReviewRow(wrap, "", 1);
+    const lst = [...wrap.querySelectorAll(".rx-row-name")];
+    lst[lst.length - 1]?.focus?.();
+  });
+
+  $("rxReviewConfirm")?.addEventListener("click", () => {
+    confirmRxReviewAndAddToCart();
+  });
+}
+
 async function uploadPrescriptionAndExtract() {
   const fileEl = $("rxFile");
   const btn = $("rxUploadBtn");
   const status = $("rxStatus");
-  const out = $("rxMatches");
-  if (!fileEl || !btn || !status || !out) return;
+  if (!fileEl || !btn || !status) return;
 
   const file = fileEl.files?.[0];
   if (!file) {
@@ -501,9 +895,7 @@ async function uploadPrescriptionAndExtract() {
   }
 
   btn.disabled = true;
-  status.textContent = "Extracting medicines from image…";
-  out.classList.add("hidden");
-  out.innerHTML = "";
+  status.textContent = "Extracting text from upload…";
 
   try {
     const fd = new FormData();
@@ -512,47 +904,31 @@ async function uploadPrescriptionAndExtract() {
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
       status.textContent = data.error || `OCR failed (${res.status})`;
-      btn.disabled = false;
       return;
     }
     const matches = data.matches || [];
-    if (!matches.length) {
-      status.textContent = "No medicines confidently matched. Try a clearer photo (printed text works best).";
-      btn.disabled = false;
+    const txt = String(data.text || "").trim();
+
+    if (!txt && matches.length === 0) {
+      status.textContent = "No OCR text extracted. Try a clearer photo.";
       return;
     }
-    status.textContent = `Matched ${matches.length} medicine(s). Click one to compare prices.`;
-    out.innerHTML = matches
-      .map((m, idx) => {
-        const extra = [m.strength, m.form, m.pack_size].filter(Boolean).join(" · ");
-        const line = m.match_line ? `Matched line: ${m.match_line}` : "";
-        return `
-          <div class="rx-match">
-            <div>
-              <div class="rx-match-title">${escapeHtml(m.display_name || "")}</div>
-              <div class="rx-match-sub muted">${escapeHtml(extra)}${line ? ` · ${escapeHtml(line)}` : ""}</div>
-            </div>
-            <button type="button" class="btn btn-sm btn-primary rx-pick" data-idx="${idx}">Compare</button>
-          </div>`;
-      })
-      .join("");
-    out.classList.remove("hidden");
-    out.querySelectorAll(".rx-pick").forEach((b) => {
-      b.addEventListener("click", () => {
-        const idx = Number(b.dataset.idx);
-        const m = matches[idx];
-        if (!m?.display_name) return;
-        $("q").value = String(m.display_name);
-        closeSuggestions?.();
-        runRealtimeSearch();
-      });
-    });
+
+    if (matches.length > 0) {
+      status.textContent = `${matches.length} medicine(s) recognised. Review names in the pop-up before adding to cart.`;
+    } else {
+      status.textContent =
+        "No catalogue matches from this OCR. Edit lines in the pop-up—we still search live by what you enter.";
+    }
+
+    openRxReviewModalAfterOcr(txt, matches);
   } catch (e) {
     status.textContent = String(e?.message || e);
   } finally {
     btn.disabled = false;
   }
 }
+
 
 function syncReminderMedicineFromOffers(offers) {
   const ids = new Set(
@@ -1367,4 +1743,5 @@ Promise.all([loadCities(), refreshAuth()])
   .then(() => updateReminderHint())
   .then(() => refreshCartBadge())
   .then(() => renderRecentChips())
+  .then(() => initRxReviewModal())
   .catch(console.error);

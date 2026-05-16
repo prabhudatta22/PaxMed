@@ -205,7 +205,6 @@
                   <button type="button" class="btn btn-ghost" id="rxUploadBtn">Extract medicines</button>
                 </div>
                 <div id="rxStatus" class="muted hint" aria-live="polite"></div>
-                <div id="rxMatches" class="rx-matches hidden" aria-label="Extracted medicines"></div>
               </div>
 
               <div class="quick-chips" aria-label="Quick searches">
@@ -377,6 +376,27 @@
         </div>
       </div>
     </footer>
+
+    <div id="rxReviewModal" class="rx-review-modal hidden" role="dialog" aria-modal="true" aria-labelledby="rxReviewTitle">
+      <div class="rx-review-backdrop" data-rx-dismiss tabindex="-1"></div>
+      <div class="rx-review-card">
+        <button type="button" class="rx-review-close" data-rx-dismiss aria-label="Close">×</button>
+        <h2 id="rxReviewTitle">Review prescription items</h2>
+        <p id="rxReviewIntro" class="rx-review-intro muted"></p>
+        <details id="rxReviewOcrWrap" class="rx-review-ocr muted hidden">
+          <summary>Show extracted text</summary>
+          <pre id="rxReviewOcrText" class="rx-review-ocr-pre"></pre>
+        </details>
+        <div id="rxReviewRows" class="rx-review-rows" aria-live="polite"></div>
+        <button type="button" class="btn btn-ghost btn-sm" id="rxReviewAddRow">+ Add line</button>
+        <p id="rxReviewBusy" class="muted hint rx-review-busy hidden" aria-live="polite"></p>
+        <p id="rxReviewError" class="hint rx-review-error hidden" aria-live="assertive"></p>
+        <div class="rx-review-actions">
+          <button type="button" class="btn btn-ghost" data-rx-dismiss>Cancel</button>
+          <button type="button" class="btn btn-primary" id="rxReviewConfirm">Confirm &amp; add to cart</button>
+        </div>
+      </div>
+    </div>
 
     <script type="module" src="/app.js"></script>
     <script>

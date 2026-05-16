@@ -23,6 +23,7 @@
     "generate:partner-templates": "node server/scripts/generate-partner-price-templates.mjs",
     "loadtest:k6": "k6 run loadtest/k6/paxmed-stress.js",
     "loadtest:node": "node loadtest/node-stress.mjs",
+    "test:prescription-ocr-samples": "node server/scripts/test-prescription-ocr-uploads.mjs",
     "test": "node --test tests/*.test.js"
   },
   "engines": {
