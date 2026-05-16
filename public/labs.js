@@ -227,6 +227,10 @@ function openPackageModal(item) {
 
 let pendingBookCtx = null;
 function openBookModal(ctx, { singleTest = true } = {}) {
+  if (ctx.bookingSupported === false) {
+    setStatus("That vendor listing is estimate-only and cannot be booked here yet.");
+    return;
+  }
   const m = bookModalEls();
   if (!m.wrap) return;
   if (singleTest) {
@@ -237,7 +241,7 @@ function openBookModal(ctx, { singleTest = true } = {}) {
       if (diagnosticsVendorCanon(pkg.vendorKey) !== targetCanon) selectedDiagPackages.delete(key);
     }
   }
-  addSelectedPackage({ ...ctx, bookingSupported: true });
+  addSelectedPackage(ctx);
   pendingBookCtx = ctx;
   const minDate = new Date();
   minDate.setDate(minDate.getDate() + 1);
@@ -987,10 +991,15 @@ function render(groups, stats) {
       const mrpInr = mrpRaw === "" || mrpRaw == null ? null : Number(mrpRaw);
       const vendorKey = btn.getAttribute("data-vendor-key") || "";
       const vendorLabel = btn.getAttribute("data-vendor-label") || vendorKey;
+      const bookingSupported = btn.getAttribute("data-booking") === "1";
       if (!city || !packageId || !packageName || !Number.isFinite(priceInr)) {
         setStatus(
           "Cannot start booking: choose a city, run Compare prices, then pick a row that shows a price.",
         );
+        return;
+      }
+      if (!bookingSupported) {
+        setStatus("That vendor row is estimate-only and cannot be booked from this table.");
         return;
       }
       if (!currentUser) {
@@ -999,7 +1008,7 @@ function render(groups, stats) {
         return;
       }
       openBookModal(
-        { city, packageId, dealId, packageName, priceInr, mrpInr, vendorKey, vendorLabel, bookingSupported: true },
+        { city, packageId, dealId, packageName, priceInr, mrpInr, vendorKey, vendorLabel, bookingSupported },
         { singleTest: true },
       );
     });
