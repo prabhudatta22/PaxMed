@@ -384,10 +384,10 @@ export async function labsCompareBundles(pool, p) {
             {
               vendor_key: vk,
               vendor_label: label,
-              booking_supported: true,
+              booking_supported: false,
               data_mode: "illustrative_vendor_stub",
               vendor_note:
-                "Benchmark quote; you can still place a PaxMed booking — ops will align with the selected lab/vendor.",
+                "Estimate for UI comparison; connect the vendor API for live prices or disable DIAG_VENDOR_STUB_QUOTES.",
             },
           ),
         );
