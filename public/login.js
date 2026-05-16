@@ -13,9 +13,9 @@ function safeReturnToPath(raw) {
 function postLoginDestination() {
   try {
     const p = new URLSearchParams(window.location.search).get("returnTo");
-    return safeReturnToPath(p) || "/";
+    return safeReturnToPath(p) || "/index.html";
   } catch {
-    return "/";
+    return "/index.html";
   }
 }
 

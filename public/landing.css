@@ -324,12 +324,17 @@ body.landing-body {
   height: 64px;
   border-radius: 18px;
   background: linear-gradient(135deg, var(--accent-grad-from), var(--accent-mint));
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   color: white;
   font-size: 28px;
   margin-bottom: 24px;
+  box-shadow: 0 12px 24px rgb(var(--accent-rgb) / 0.18);
+}
+
+.landing-body .feature-icon svg {
+  display: block;
 }
 
 .landing-body .feature-card h3 {

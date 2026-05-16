@@ -566,6 +566,107 @@ function onlyLocalItems(items) {
   return (items || []).filter((x) => x && x.source === "local");
 }
 
+function onlyDiagnosticsItems(items) {
+  return (items || []).filter((x) => x && x.source === "diagnostics");
+}
+
+let savedProfileAddressesCache = null;
+
+async function fetchSavedAddresses({ force = false } = {}) {
+  if (!force && savedProfileAddressesCache) return savedProfileAddressesCache;
+  try {
+    const res = await fetch("/api/profile", { credentials: "same-origin" });
+    if (!res.ok) {
+      savedProfileAddressesCache = [];
+      return [];
+    }
+    const data = await res.json().catch(() => ({}));
+    const list = Array.isArray(data?.addresses) ? data.addresses : [];
+    savedProfileAddressesCache = list;
+    return list;
+  } catch {
+    savedProfileAddressesCache = [];
+    return [];
+  }
+}
+
+function pickDefaultAddress(addresses) {
+  if (!Array.isArray(addresses) || !addresses.length) return null;
+  const def = addresses.find((a) => a && a.is_default);
+  if (def) return def;
+  return addresses[0];
+}
+
+function isCompleteSavedAddress(addr) {
+  if (!addr) return false;
+  const line1 = String(addr.address_line1 || "").trim();
+  const pin = String(addr.pincode || "").replace(/\D/g, "");
+  return Boolean(line1 && pin.length === 6);
+}
+
+function setInputValueIfEmpty(id, value) {
+  const el = $(id);
+  if (!el) return;
+  const cur = String(el.value || "").trim();
+  if (cur) return;
+  if (value == null) return;
+  el.value = String(value);
+}
+
+function formatSavedAddressOneLine(addr) {
+  if (!addr) return "";
+  const parts = [
+    addr.address_line1,
+    addr.landmark,
+    addr.city,
+    addr.state,
+    addr.pincode ? `PIN ${String(addr.pincode).trim()}` : "",
+  ]
+    .map((s) => String(s || "").trim())
+    .filter(Boolean);
+  return parts.join(", ");
+}
+
+async function applySavedAddressToCheckout({ hasMedicines, hasDiagnostics }) {
+  if (!hasMedicines && !hasDiagnostics) return;
+  const addresses = await fetchSavedAddresses();
+  const def = pickDefaultAddress(addresses);
+  const complete = isCompleteSavedAddress(def);
+  const cleanPin = def ? String(def.pincode || "").replace(/\D/g, "").slice(0, 6) : "";
+
+  if (hasMedicines && def) {
+    setInputValueIfEmpty("addr1", def.address_line1 || "");
+    setInputValueIfEmpty("landmark", def.landmark || "");
+    setInputValueIfEmpty("addrCity", def.city || "");
+    if (cleanPin.length === 6) setInputValueIfEmpty("addrPin", cleanPin);
+  }
+
+  if (hasDiagnostics) {
+    if (cleanPin.length === 6) setInputValueIfEmpty("diagPincode", cleanPin);
+
+    const savedEl = $("diagSavedAddress");
+    const pinHintEl = $("diagPinHint");
+    const pinFieldLabel = $("diagPincode")?.closest("label");
+    if (complete) {
+      if (savedEl) {
+        savedEl.classList.remove("hidden");
+        savedEl.innerHTML = `Pickup using your saved address: <strong>${escapeHtml(
+          formatSavedAddressOneLine(def)
+        )}</strong>. <a href="/profile.html?view=addresses">Change</a>`;
+      }
+      if (pinHintEl) pinHintEl.classList.add("hidden");
+      if (pinFieldLabel) pinFieldLabel.classList.add("hidden");
+    } else {
+      if (savedEl) {
+        savedEl.classList.add("hidden");
+        savedEl.innerHTML = "";
+      }
+      if (pinHintEl) pinHintEl.classList.remove("hidden");
+      if (pinFieldLabel) pinFieldLabel.classList.remove("hidden");
+    }
+  }
+}
+
 function renderDoseTable(lines) {
   const host = $("doseRows");
   if (!host) return;
@@ -933,8 +1034,11 @@ function render() {
     });
   });
 
-  // Home delivery panel
+  // Home delivery panel — hide entirely when there is no medicine in cart so a
+  // diagnostics-only cart isn't blocked by the medicine-delivery flow.
   const locals = onlyLocalItems(items);
+  const deliveryPanel = $("deliveryPanel");
+  if (deliveryPanel) deliveryPanel.classList.toggle("hidden", locals.length === 0);
   const pob = $("placeOrderBtn");
   if (pob) pob.disabled = locals.length === 0;
   renderDoseTable(locals);
@@ -942,6 +1046,10 @@ function render() {
   const diagDate = $("diagDate");
   const diagPay = $("diagPaymentType");
   const diagLines = onlyDiagnosticsItems(items);
+  const hasEstimateDiagnostics = diagLines.some(isDiagnosticsEstimateLine);
+  const estHintEl = $("diagEstimateHint");
+  if (estHintEl) estHintEl.classList.toggle("hidden", !hasEstimateDiagnostics);
+
   if (diagPanel) diagPanel.classList.toggle("hidden", diagLines.length === 0);
   if (diagDate) {
     const minDate = new Date();
@@ -959,6 +1067,11 @@ function render() {
   syncDeliveryPaymentHint();
 
   void fetchMe().then((u) => updateCheckoutAuthBanner(u));
+
+  void applySavedAddressToCheckout({
+    hasMedicines: locals.length > 0,
+    hasDiagnostics: diagLines.length > 0,
+  });
 
   void refreshPrescriptionCheckoutPanel();
 }

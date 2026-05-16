@@ -11,22 +11,68 @@
     <div class="bg-grid"></div>
     <header class="topbar">
       <div class="topbar-inner">
-        <a class="brand" href="/landing.html" style="text-decoration: none; color: inherit">
-          <img class="brand-mark" src="/PaxMedLogo.png" alt="PaxMed" width="150" height="150" />
-          <div>
+        <a class="brand" href="/landing.html" aria-label="PaxMed home">
+          <img class="brand-mark" src="/PaxMedLogo.png" alt="" width="44" height="44" />
+          <div class="brand-text">
             <h1>PaxMed</h1>
-            <p class="tagline">Your profile</p>
+            <p class="tagline">Your account & health profile</p>
           </div>
         </a>
-        <nav class="header-nav" aria-label="Account">
-          <a href="/index.html" class="nav-link">Medicines</a>
-          <a href="/labs.html" class="nav-link">Diagnostics</a>
-          <a href="/checkout.html" class="nav-link">Cart</a>
-          <a href="/orders.html" class="nav-link">Orders</a>
-          <a href="/profile.html?view=details" id="navProfile" class="nav-link active">Profile</a>
+        <nav class="header-nav" aria-label="Primary">
+          <a href="/index.html" class="nav-link">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+              <path d="M10.5 4.5a4.5 4.5 0 0 1 6.36 6.36l-7 7a4.5 4.5 0 0 1-6.36-6.36l7-7Z" />
+              <path d="m8.5 6.5 9 9" />
+            </svg>
+            Medicines
+          </a>
+          <a href="/labs.html" class="nav-link">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+              <path d="M9 3v6.2L4.4 17a2 2 0 0 0 1.7 3h11.8a2 2 0 0 0 1.7-3L15 9.2V3" />
+              <path d="M8 3h8" />
+              <path d="M7.5 13h9" />
+            </svg>
+            Diagnostics
+          </a>
+          <a href="/checkout.html" class="nav-link nav-link--cart">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+              <path d="M3 4h2.2l2 12.4a2 2 0 0 0 2 1.6h8.6a2 2 0 0 0 2-1.5L21 8H6.5" />
+              <circle cx="9" cy="20" r="1.4" fill="currentColor" stroke="none" />
+              <circle cx="17" cy="20" r="1.4" fill="currentColor" stroke="none" />
+            </svg>
+            Cart
+          </a>
+          <a href="/orders.html" class="nav-link">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+              <path d="M6 3.5h12a1.5 1.5 0 0 1 1.5 1.5v15.5L17 19l-2.5 1.5L12 19l-2.5 1.5L7 19l-2.5 1.5V5A1.5 1.5 0 0 1 6 3.5Z" />
+              <path d="M8.5 8h7M8.5 11.5h7M8.5 15h4" />
+            </svg>
+            Orders
+          </a>
+          <a href="/profile.html?view=details" id="navProfile" class="nav-link active">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+              <circle cx="12" cy="8" r="4" />
+              <path d="M4 21a8 8 0 0 1 16 0" />
+            </svg>
+            Profile
+          </a>
           <span id="navUser" class="nav-pill hidden" aria-live="polite"></span>
-          <a href="/login.html" id="navLogin" class="nav-link">Login</a>
-          <a href="#" id="navLogout" class="nav-link hidden">Logout</a>
+          <a href="/login.html" id="navLogin" class="nav-link">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+              <path d="M10 4h6a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6" />
+              <path d="M3 12h11" />
+              <path d="m11 8 4 4-4 4" />
+            </svg>
+            Login
+          </a>
+          <a href="#" id="navLogout" class="nav-link hidden">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+              <path d="M14 4H8a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h6" />
+              <path d="M21 12H10" />
+              <path d="m13 8-4 4 4 4" />
+            </svg>
+            Logout
+          </a>
         </nav>
       </div>
     </header>
@@ -148,6 +194,29 @@
         </div>
       </section>
     </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        <div class="footer-left">
+          <a class="footer-brand" href="/landing.html" aria-label="PaxMed home">
+            <img src="/PaxMedLogo.png" alt="" width="22" height="22" />
+            <span class="footer-brand-name">PaxMed</span>
+          </a>
+          <span class="muted">© 2026 · India (INR)</span>
+        </div>
+        <div class="footer-right">
+          <a href="/index.html" class="muted">Medicines</a>
+          <span class="dot">·</span>
+          <a href="/labs.html" class="muted">Diagnostics</a>
+          <span class="dot">·</span>
+          <a href="/orders.html" class="muted">Orders</a>
+          <span class="dot">·</span>
+          <a href="/privacy.html" class="muted">Privacy</a>
+          <span class="dot">·</span>
+          <a href="/terms.html" class="muted">Terms</a>
+        </div>
+      </div>
+    </footer>
 
     <script type="module" src="/profile.js"></script>
   </body>

@@ -271,7 +271,7 @@ router.get("/google/callback", async (req, res) => {
 
     const returnCookie = req.cookies?.greturn;
     res.clearCookie("greturn");
-    const dest = safeInternalRedirectPath(returnCookie, "/orders.html");
+    const dest = safeInternalRedirectPath(returnCookie, "/index.html");
     return res.redirect(dest);
   } catch (e) {
     return res.status(500).send(`Google login failed: ${String(e?.message || e)}`);
