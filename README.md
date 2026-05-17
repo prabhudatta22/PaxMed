@@ -58,15 +58,48 @@ Install Docker Desktop, then start Postgres via Compose:
 
 4. Open **http://localhost:3000** — type a medicine name; the app queries each configured online retailer in parallel and shows matching **demo** pharmacy rows for the selected city.
 
-### Mobile app (Flutter)
-
-Native **Android / iOS** client: **`apps/flutter/paxmed_app/`** (`README.md` · **`PUBLISHING.md`** for Play & App Store). Optional host-free tooling: **`docker/flutter-env.yml`** (Flutter image + repo mount).
-
 5. **Optional — unit tests**
 
    ```bash
    npm test
    ```
+
+## Mobile app (Flutter)
+
+Native **Android** and **iOS** shells live under **`apps/flutter/paxmed_app/`** — same Node API as the web app (`/api/*`). Detailed run instructions: **`apps/flutter/paxmed_app/README.md`**. **Google Play** and **Apple App Store** checklist: **`apps/flutter/paxmed_app/PUBLISHING.md`**.
+
+### Store identifiers
+
+| Platform | Identifier |
+|---------|-------------|
+| **Android** (`applicationId`) | `in.paxmed.paxmed_app` |
+| **iOS** (bundle ID) | `in.paxmed.paxmedApp` |
+
+Change these consistently in Gradle + Xcode (and docs) before you register the app under different IDs.
+
+### Run locally
+
+```bash
+cd apps/flutter/paxmed_app
+flutter pub get
+flutter analyze   # optional; verifies Dart on current SDK
+flutter run
+```
+
+The in-app **Settings** sheet stores the API **base URL**. Dev defaults: Android emulator **`http://10.0.2.2:3000`**, iOS simulator **`http://localhost:3000`**, physical device **`http://<your-LAN-ip>:3000`** (same Wi‑Fi as the backend). Ship with production **HTTPS** and aligned cookie/session settings if you rely on cookie auth.
+
+### Flutter via Docker (`docker/flutter-env.yml`)
+
+For CI or laptops **without** a Flutter SDK, use **`docker/flutter-env.yml`** (image **`ghcr.io/cirruslabs/flutter:stable`**, workspace **`/work/apps/flutter/paxmed_app`**). Containers get a **fresh** pub cache each run — **always** run **`flutter pub get`** in the **same** shell invocation as **`flutter build`**:
+
+```bash
+# From repository root
+docker compose -f docker/flutter-env.yml run --rm flutter bash -lc "flutter pub get && dart analyze lib test"
+
+docker compose -f docker/flutter-env.yml run --rm flutter bash -lc "flutter pub get && flutter build apk --release"
+```
+
+**App Store IPA** archiving/signing still needs **macOS + Xcode** (or your CI) even when dependencies are resolved in Docker.
 
 ## Importing ERP exports (Marg / RetailGraph)
 
