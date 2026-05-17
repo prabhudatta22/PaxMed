@@ -99,6 +99,8 @@ docker compose -f docker/flutter-env.yml run --rm flutter bash -lc "flutter pub 
 docker compose -f docker/flutter-env.yml run --rm flutter bash -lc "flutter pub get && flutter build apk --release"
 ```
 
+**Android Gradle inside Docker** can still fail with **AAPT2 daemon startup failed** (resource packaging) on some hosts—especially **ARM Macs emulating linux/amd64** or constrained CI. For reliable **APKs / app bundles**, use **Flutter + Android SDK on the host** (or configure your runner with adequate memory and a compatible Android build-tools stack). **`flutter pub get`**, **`dart analyze`**, and codegen-style steps in Docker remain useful even when Gradle packaging is deferred to a native environment.
+
 **App Store IPA** archiving/signing still needs **macOS + Xcode** (or your CI) even when dependencies are resolved in Docker.
 
 ## Importing ERP exports (Marg / RetailGraph)

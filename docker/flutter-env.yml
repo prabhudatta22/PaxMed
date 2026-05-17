@@ -1,7 +1,8 @@
 # Reproducible Flutter CLI (matching CI / machines without Flutter installed).
 #
 # Important: fetch packages before build in the same container run (ephemeral HOME/pub-cache).
-# Usage from repo root:
+# Android Gradle packaging may hit AAPT2 daemon errors in Docker on some hosts (e.g. ARM Mac)—use host SDK for APK/AAB when needed.
+# Usage from repository root:
 #   docker compose -f docker/flutter-env.yml run --rm flutter bash -lc "flutter pub get && flutter build apk --release"
 
 services:
