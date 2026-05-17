@@ -95,11 +95,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
-    unawaited(WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (!mounted) return;
-      if (!context.read<AuthState>().isLoggedIn) return;
-      await load();
-    }));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(_initLoad());
+    });
+  }
+
+  Future<void> _initLoad() async {
+    if (!mounted) return;
+    if (!context.read<AuthState>().isLoggedIn) return;
+    await load();
   }
 
   Future<void> _saveBasic(ApiBinding binding) async {

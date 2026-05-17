@@ -109,6 +109,7 @@ class CartScreen extends StatelessWidget {
             ]
           ];
 
+    late final Widget bodyCore;
     if (items.isEmpty) {
       bodyCore = Padding(
         padding: const EdgeInsets.all(24),

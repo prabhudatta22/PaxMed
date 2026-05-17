@@ -53,7 +53,9 @@ class _AbhaScreenState extends State<AbhaScreen> {
   @override
   void initState() {
     super.initState();
-    unawaited(WidgetsBinding.instance.addPostFrameCallback((_) => _refresh(context.read<ApiBinding>())));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(_refresh(context.read<ApiBinding>()));
+    });
   }
 
   Future<void> _initiate(ApiBinding binding) async {

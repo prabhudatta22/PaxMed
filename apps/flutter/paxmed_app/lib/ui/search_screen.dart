@@ -9,6 +9,7 @@ import '../core/api_binding.dart';
 
 import '../api/models.dart';
 import '../api/client.dart';
+import '../state/cart_state.dart';
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key, this.embedded = false});
 

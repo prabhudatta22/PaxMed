@@ -1,0 +1,14 @@
+# Reproducible Flutter CLI (matching CI / machines without Flutter installed).
+#
+# Usage from repo root:
+#   docker compose -f docker/flutter-env.yml run --rm flutter flutter --version
+#   docker compose -f docker/flutter-env.yml run --rm flutter bash -lc "cd apps/flutter/paxmed_app && flutter pub get && flutter build apk --release"
+
+services:
+  flutter:
+    image: ghcr.io/cirruslabs/flutter:stable
+    working_dir: /work/apps/flutter/paxmed_app
+    volumes:
+      - ..:/work
+    stdin_open: true
+    tty: true

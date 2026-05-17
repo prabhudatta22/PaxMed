@@ -1,0 +1,10 @@
+# Copy to android/key.properties and fill with your Play Store upload keystore values.
+# Never commit key.properties or .jks / .keystore files.
+#
+# Create a keystore (one-time):
+#   keytool -genkey -v -keystore upload-keystore.jks -keyalg RSA -keysize 2048 -validity 10000 -alias upload
+
+storePassword=your-store-password
+keyPassword=your-key-password
+keyAlias=upload
+storeFile=/absolute/path/to/upload-keystore.jks

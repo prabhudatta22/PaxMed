@@ -58,6 +58,10 @@ Install Docker Desktop, then start Postgres via Compose:
 
 4. Open **http://localhost:3000** — type a medicine name; the app queries each configured online retailer in parallel and shows matching **demo** pharmacy rows for the selected city.
 
+### Mobile app (Flutter)
+
+Native **Android / iOS** client: **`apps/flutter/paxmed_app/`** (`README.md` · **`PUBLISHING.md`** for Play & App Store). Optional host-free tooling: **`docker/flutter-env.yml`** (Flutter image + repo mount).
+
 5. **Optional — unit tests**
 
    ```bash

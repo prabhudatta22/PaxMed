@@ -1,49 +1,48 @@
-## PaxMed Flutter app
+# PaxMed — Flutter (`paxmed_app`)
 
-This folder contains the Flutter UI for PaxMed. It uses the existing Node/Express backend in this repo.
+Native shells for **Google Play** and the **Apple App Store**, using this repo’s existing Node.js API (`/api/*`).
 
-### 1) Install Flutter
+## Setup
 
-Follow Flutter docs for macOS and ensure `flutter` is on your PATH.
-
-### 2) Generate platform scaffolding (one-time)
-
-From repo root:
+Install [Flutter stable](https://docs.flutter.dev/get-started/install) (includes Dart). Once:
 
 ```bash
 cd apps/flutter/paxmed_app
-flutter create .
 flutter pub get
 ```
 
-This generates `android/`, `ios/`, etc. (they are intentionally not checked in by the agent because Flutter tooling isn't available in the build environment).
+Ensure the backend is reachable (default dev: port `3000`).
 
-### 3) Run backend
-
-From repo root:
-
-```bash
-npm run dev
-```
-
-Backend defaults to `http://localhost:3000`.
-
-### 4) Run the app
-
-- **Android emulator**:
-  - API base URL should be `http://10.0.2.2:3000` (default in app settings).
-- **iOS simulator**:
-  - Use `http://localhost:3000`.
-- **Physical device**:
-  - Use your laptop LAN IP (e.g. `http://192.168.1.10:3000`) and ensure phone + laptop are on same Wi‑Fi.
+Run:
 
 ```bash
 flutter run
 ```
 
-### Features covered
+**API base URL** is configurable in-app (Settings drawer). Emulator defaults vary by OS:
 
-- Live medicine search: `/api/online/compare?q=...` + `/api/compare/search?q=...&city=...`
-- Use my location: device GPS → `/api/geocode/reverse?lat=&lng=` (server uses `GOOGLE_MAPS_API_KEY`)
-- Cart + multi-checkout: add rows, open retailer/pharmacy links
+| Target | Typical base URL |
+|--------|------------------|
+| Android emulator | `http://10.0.2.2:3000` |
+| iOS simulator | `http://localhost:3000` |
+| Physical device | `http://<your-lan-ip>:3000` (same Wi‑Fi) |
+| Production | Your HTTPS domain |
 
+## Features (Dart client)
+
+Medicine compare, labs, cart/checkout hand-off, orders, Razorpay, ABHA stubs, OTP/cookie-backed session (`dio` + persisted cookies).
+
+See **`PUBLISHING.md`** for **Play Console** and **App Store Connect** release steps (signing IDs, bundles, versioning).
+
+## Docker Flutter (optional)
+
+Without a host Flutter SDK:
+
+```bash
+# from repo root
+docker compose -f docker/flutter-env.yml run --rm flutter bash -lc "flutter pub get && flutter analyze"
+docker compose -f docker/flutter-env.yml run --rm flutter bash -lc "flutter build apk --release"
+docker compose -f docker/flutter-env.yml run --rm flutter bash -lc "flutter build ipa --no-codesign"
+```
+
+IPA still needs Apple codesigning on macOS/Xcode for submission.
