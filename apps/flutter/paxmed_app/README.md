@@ -4,11 +4,47 @@ Native shells for **Google Play** and the **Apple App Store**, using this repo�
 
 ## Setup
 
-Install [Flutter stable](https://docs.flutter.dev/get-started/install) (includes Dart). Once:
+Install [Flutter stable](https://docs.flutter.dev/get-started/install) (includes Dart).
+
+### macOS — iOS (Xcode)
+
+Flutter needs the **full Xcode app**, not only “Command Line Tools”, so it can run `xcodebuild -list` and resolve `$(PRODUCT_BUNDLE_IDENTIFIER)` in `Info.plist`.
+
+1. Install **Xcode** from the Mac App Store and open it once (install components).
+2. Point the developer directory at Xcode (adjust the path if Xcode lives elsewhere):
+
+   ```bash
+   sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+   sudo xcodebuild -license accept
+   ```
+
+3. Install **CocoaPods** (pick one): `brew install cocoapods` or `sudo gem install cocoapods`.
+4. Install iOS pods **after** `flutter pub get`:
+
+   ```bash
+   cd apps/flutter/paxmed_app
+   flutter pub get
+   cd ios && pod install && cd ..
+   ```
+
+Use **`ios/Runner.xcworkspace`** in Xcode (not `Runner.xcodeproj`) once Pods exist.
+
+### Android SDK
+
+Install **Android Studio** (or Android SDK command-line tools), accept SDK licenses, then either rely on Android Studio’s default SDK path or tell Flutter explicitly:
+
+```bash
+flutter config --android-sdk "$HOME/Library/Android/sdk"
+```
+
+Set **`ANDROID_HOME`** (or **`ANDROID_SDK_ROOT`**) to that same directory in your shell profile.
+
+### Project deps
 
 ```bash
 cd apps/flutter/paxmed_app
 flutter pub get
+flutter doctor -v
 ```
 
 Ensure the backend is reachable (default dev: port `3000`).
@@ -18,6 +54,12 @@ Run:
 ```bash
 flutter run
 ```
+
+### Troubleshooting
+
+- **`Application not configured for iOS`** — Usually **`xcode-select`** still points at Command Line Tools. Run the `sudo xcode-select -s …` step above, then `flutter doctor`.
+- **`pod: command not found`** — Install CocoaPods, then `cd ios && pod install`.
+- **`No Android SDK found`** — Install the SDK and set `ANDROID_HOME` / `flutter config --android-sdk`.
 
 **API base URL** is configurable in-app (Settings drawer). Emulator defaults vary by OS:
 

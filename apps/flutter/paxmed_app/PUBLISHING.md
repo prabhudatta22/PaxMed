@@ -13,7 +13,10 @@ Change these **before** shipping if another party already owns them in Play Cons
 
 ## Prereqs
 
-- Flutter stable (Dart SDK matches `pubspec.yaml`), Xcode (macOS only), Android SDK for Play.
+- Flutter stable (Dart SDK matches `pubspec.yaml`).
+- **macOS / App Store**: Full **Xcode** from the App Store with developer dir set to it (`sudo xcode-select -s /Applications/Xcode.app/Contents/Developer`). Command Line Tools alone are not enough for Flutter iOS builds.
+- **CocoaPods**: install Pods before archiving — `cd apps/flutter/paxmed_app && flutter pub get && cd ios && pod install`; open **`Runner.xcworkspace`**.
+- **Google Play**: Android SDK (Android Studio or cmdline-tools); `ANDROID_HOME` / `flutter config --android-sdk`.
 - A **privacy policy URL** on HTTPS (required for listing; align text with actual data flows).
 
 ---

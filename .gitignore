@@ -1,3 +1,6 @@
+# Repo-local Flutter SDK clone (optional; large — do not commit)
+tools/flutter/
+
 # Logs
 logs
 *.log
