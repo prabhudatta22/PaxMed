@@ -60,6 +60,7 @@ flutter run
 - **`Application not configured for iOS`** — Usually **`xcode-select`** still points at Command Line Tools. Run the `sudo xcode-select -s …` step above, then `flutter doctor`.
 - **`pod: command not found`** — Install CocoaPods, then `cd ios && pod install`.
 - **`No Android SDK found`** — Install the SDK and set `ANDROID_HOME` / `flutter config --android-sdk`.
+- **Gradle fails with SDK / `sdk.dir` errors** — `android/local.properties` is gitignored and machine-specific. If it contains a path from another machine or OS (for example **`/opt/android-sdk-linux` on a Mac**), remove or fix the `sdk.dir=` line so it matches **`$HOME/Library/Android/sdk`** (or your real SDK path), then run `flutter doctor -v`.
 
 **API base URL** is configurable in-app (Settings drawer). Emulator defaults vary by OS:
 

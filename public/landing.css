@@ -382,6 +382,42 @@ body.landing-body {
   font-size: 15px;
 }
 
+.landing-body .site-footer-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 14px 24px;
+}
+
+.landing-body .footer-copy {
+  margin: 0;
+}
+
+.landing-body .footer-legal {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.landing-body .footer-legal a {
+  color: rgba(255, 255, 255, 0.92);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.landing-body .footer-legal a:hover {
+  color: #fff;
+  text-decoration: underline;
+}
+
+.landing-body .footer-dot {
+  opacity: 0.45;
+  user-select: none;
+}
+
 @media (max-width: 1024px) {
   .landing-body .hero-content,
   .landing-body .feature-grid {

@@ -102,16 +102,14 @@ class _PaxMedShellState extends State<PaxMedShell> {
           ),
         ],
       ),
-      body: IndexedStack(
-        index: _tab,
-        children: const [
-          SearchScreen(embedded: true),
-          LabsScreen(embedded: true),
-          CartScreen(embedded: true),
-          OrdersScreen(),
-          ProfileScreen(),
-        ],
-      ),
+      body: switch (_tab) {
+        0 => const SearchScreen(embedded: true),
+        1 => const LabsScreen(embedded: true),
+        2 => const CartScreen(embedded: true),
+        3 => const OrdersScreen(embedded: true),
+        4 => const ProfileScreen(embedded: true),
+        _ => const SizedBox.shrink(),
+      },
       bottomNavigationBar: NavigationBar(
         selectedIndex: _tab,
         onDestinationSelected: (i) => setState(() => _tab = i),

@@ -8,7 +8,9 @@ import 'login_screen.dart';
 import 'order_detail_screen.dart';
 
 class OrdersScreen extends StatefulWidget {
-  const OrdersScreen({super.key});
+  const OrdersScreen({super.key, this.embedded = false});
+
+  final bool embedded;
 
   @override
   State<OrdersScreen> createState() => _OrdersScreenState();
@@ -54,33 +56,35 @@ class _OrdersScreenState extends State<OrdersScreen> {
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthState>();
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Orders'),
-        actions: [
-          IconButton(onPressed: load, icon: const Icon(Icons.refresh)),
-        ],
-      ),
-      body: !auth.isLoggedIn
-          ? Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  children: [
-                    const Text('Sign in to fetch your backend orders.'),
-                    const SizedBox(height: 14),
-                    FilledButton(onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const LoginScreen())), child: const Text('Login')),
-                  ],
-                ),
+
+    final Widget body = !auth.isLoggedIn
+        ? Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('Sign in to fetch your backend orders.'),
+                  const SizedBox(height: 14),
+                  FilledButton(
+                    onPressed: () =>
+                        Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const LoginScreen())),
+                    child: const Text('Login'),
+                  ),
+                ],
               ),
-            )
-          : _loading
-              ? const Center(child: CircularProgressIndicator())
-              : ((_err ?? '').trim().isNotEmpty)
-                  ? Center(child: Padding(padding: const EdgeInsets.all(16), child: Text(_err!)))
-                  : _rows.isEmpty
-                      ? const Center(child: Text('No backend orders yet.'))
-                      : ListView.separated(
+            ),
+          )
+        : _loading
+            ? const Center(child: CircularProgressIndicator())
+            : ((_err ?? '').trim().isNotEmpty)
+                ? Center(child: Padding(padding: const EdgeInsets.all(16), child: Text(_err!)))
+                : _rows.isEmpty
+                    ? const Center(child: Text('No backend orders yet.'))
+                    : RefreshIndicator(
+                        onRefresh: load,
+                        child: ListView.separated(
+                          physics: const AlwaysScrollableScrollPhysics(),
                           padding: const EdgeInsets.all(12),
                           separatorBuilder: (_, __) => const Divider(height: 1),
                           itemCount: _rows.length,
@@ -92,15 +96,29 @@ class _OrdersScreenState extends State<OrdersScreen> {
                               subtitle: Text('${o['status']} · ${fmtDt(o['created_at'] ?? o['scheduled_for'])}'),
                               trailing: const Icon(Icons.chevron_right),
                               onTap: () {
-                                Navigator.of(context).push(
-                                  MaterialPageRoute<void>(
-                                    builder: (_) => OrderDetailScreen(orderId: id),
-                                  ),
-                                ).then((_) => load());
+                                Navigator.of(context)
+                                    .push(
+                                      MaterialPageRoute<void>(
+                                        builder: (_) => OrderDetailScreen(orderId: id),
+                                      ),
+                                    )
+                                    .then((_) => load());
                               },
                             );
                           },
                         ),
+                      );
+
+    if (widget.embedded) return body;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Orders'),
+        actions: [
+          IconButton(onPressed: load, icon: const Icon(Icons.refresh)),
+        ],
+      ),
+      body: body,
     );
   }
 }

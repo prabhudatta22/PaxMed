@@ -11,7 +11,9 @@ import 'abha_screen.dart';
 import 'login_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
+  const ProfileScreen({super.key, this.embedded = false});
+
+  final bool embedded;
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -217,6 +219,114 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthState>();
     final apiBind = context.read<ApiBinding>();
+
+    final listChildren = <Widget>[
+      if (!auth.isLoggedIn)
+        Card(
+          child: ListTile(
+            title: const Text('Guest mode'),
+            subtitle: const Text('Sign in with OTP to unlock profile endpoints.'),
+            trailing: FilledButton(
+              child: const Text('Login'),
+              onPressed: () =>
+                  Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const LoginScreen())),
+            ),
+          ),
+        )
+      else ...[
+        if ((err ?? '').trim().isNotEmpty)
+          Text(err!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+        ExpansionTile(title: const Text('Basic'), children: [
+          TextField(controller: _fullName, decoration: const InputDecoration(labelText: 'Full name')),
+          TextField(controller: _email, decoration: const InputDecoration(labelText: 'Email')),
+          TextField(controller: _dob, decoration: const InputDecoration(labelText: 'DOB yyyy-mm-dd')),
+          DropdownButtonFormField<String>(
+            value: ['male', 'female', 'other', 'prefer_not_to_say'].contains(_gender) ? _gender : 'prefer_not_to_say',
+            items: const [
+              DropdownMenuItem(value: 'male', child: Text('Male')),
+              DropdownMenuItem(value: 'female', child: Text('Female')),
+              DropdownMenuItem(value: 'other', child: Text('Other')),
+              DropdownMenuItem(value: 'prefer_not_to_say', child: Text('Prefer not to say')),
+            ],
+            onChanged: (nv) => setState(() => _gender = nv ?? 'prefer_not_to_say'),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: FilledButton(onPressed: () => _saveBasic(apiBind), child: const Text('Save')),
+          ),
+        ]),
+        ExpansionTile(
+          title: Text('Addresses (${addresses.length})'),
+          children: [
+            for (final a in addresses)
+              ListTile(
+                title: Text('${a['label'] ?? 'Address'}'),
+                subtitle: Text('${a['address_line1']}\nPIN ${a['pincode']}'),
+                trailing: IconButton(
+                  icon: const Icon(Icons.star_outline),
+                  onPressed: () async {
+                    try {
+                      await apiBind.client.postProfileAddressDefault((a['id'] as num).toInt());
+                      await load();
+                    } catch (e) {
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+                    }
+                  },
+                ),
+              ),
+            ListTile(title: TextButton(onPressed: () => _addAddress(apiBind), child: const Text('Add'))),
+          ],
+        ),
+        ExpansionTile(
+          title: Text('Payments (${payments.length})'),
+          children: [
+            for (final p in payments)
+              ListTile(title: Text('${p['label']} (${p['method_type']})'), subtitle: Text('${p['upi_id'] ?? p['card_last4']}')),
+            ListTile(title: TextButton(onPressed: () => _addPay(apiBind), child: const Text('Add UPI'))),
+          ],
+        ),
+        ExpansionTile(
+          title: Text('Prescriptions (${rxList.length})'),
+          children: [
+            for (final p in rxList)
+              ListTile(
+                leading: const Icon(Icons.insert_drive_file),
+                title: Text('${p['original_filename']}'),
+                subtitle: Text('${p['created_at']}'),
+              ),
+            ListTile(title: TextButton(onPressed: () => _uploadRx(apiBind), child: const Text('Upload image/PDF from gallery'))),
+          ],
+        ),
+        ListTile(
+          title: const Text('ABHA & health ID linking'),
+          trailing: const Icon(Icons.link),
+          onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const AbhaScreen())),
+        ),
+        ListTile(
+          title: const Text('Sign out'),
+          onTap: () async {
+            await auth.signOut(apiBind);
+            await load();
+          },
+        ),
+      ],
+    ];
+
+    final Widget body = loading && auth.isLoggedIn
+        ? const Center(child: CircularProgressIndicator())
+        : RefreshIndicator(
+            onRefresh: () async {
+              if (auth.isLoggedIn) await load();
+            },
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(12),
+              children: listChildren,
+            ),
+          );
+
+    if (widget.embedded) return body;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Profile'),
@@ -224,105 +334,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
           IconButton(onPressed: load, icon: const Icon(Icons.refresh)),
         ],
       ),
-      body: loading
-          ? const Center(child: CircularProgressIndicator())
-          : ListView(
-              padding: const EdgeInsets.all(12),
-              children: [
-                if (!auth.isLoggedIn)
-                  Card(
-                    child: ListTile(
-                      title: const Text('Guest mode'),
-                      subtitle: const Text('Sign in with OTP to unlock profile endpoints.'),
-                      trailing: FilledButton(
-                        child: const Text('Login'),
-                        onPressed: () =>
-                            Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const LoginScreen())),
-                      ),
-                    ),
-                  )
-                else ...[
-                  if ((err ?? '').trim().isNotEmpty) Text(err!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
-                  ExpansionTile(title: const Text('Basic'), children: [
-                    TextField(controller: _fullName, decoration: const InputDecoration(labelText: 'Full name')),
-                    TextField(controller: _email, decoration: const InputDecoration(labelText: 'Email')),
-                    TextField(controller: _dob, decoration: const InputDecoration(labelText: 'DOB yyyy-mm-dd')),
-                    DropdownButtonFormField<String>(
-                      value: ['male', 'female', 'other', 'prefer_not_to_say'].contains(_gender) ? _gender : 'prefer_not_to_say',
-                      items: const [
-                        DropdownMenuItem(value: 'male', child: Text('Male')),
-                        DropdownMenuItem(value: 'female', child: Text('Female')),
-                        DropdownMenuItem(value: 'other', child: Text('Other')),
-                        DropdownMenuItem(value: 'prefer_not_to_say', child: Text('Prefer not to say')),
-                      ],
-                      onChanged: (nv) => setState(() => _gender = nv ?? 'prefer_not_to_say'),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: FilledButton(onPressed: () => _saveBasic(apiBind), child: const Text('Save')),
-                    ),
-                  ]),
-                  ExpansionTile(
-                    title: Text('Addresses (${addresses.length})'),
-                    children: [
-                      for (final a in addresses)
-                        ListTile(
-                          title: Text('${a['label'] ?? 'Address'}'),
-                          subtitle: Text('${a['address_line1']}\nPIN ${a['pincode']}'),
-                          trailing: IconButton(
-                            icon: const Icon(Icons.star_outline),
-                            onPressed: () async {
-                              try {
-                                await apiBind.client.postProfileAddressDefault((a['id'] as num).toInt());
-                                await load();
-                              } catch (e) {
-                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
-                              }
-                            },
-                          ),
-                        ),
-                      ListTile(title: TextButton(onPressed: () => _addAddress(apiBind), child: const Text('Add'))),
-                    ],
-                  ),
-                  ExpansionTile(
-                    title: Text('Payments (${payments.length})'),
-                    children: [
-                      for (final p in payments)
-                        ListTile(title: Text('${p['label']} (${p['method_type']})'), subtitle: Text('${p['upi_id'] ?? p['card_last4']}')),
-                      ListTile(title: TextButton(onPressed: () => _addPay(apiBind), child: const Text('Add UPI'))),
-                    ],
-                  ),
-                  ExpansionTile(
-                    title: Text('Prescriptions (${rxList.length})'),
-                    children: [
-                      for (final p in rxList)
-                        ListTile(
-                          leading: const Icon(Icons.insert_drive_file),
-                          title: Text('${p['original_filename']}'),
-                          subtitle: Text('${p['created_at']}'),
-                        ),
-                      ListTile(title: TextButton(onPressed: () => _uploadRx(apiBind), child: const Text('Upload image/PDF from gallery'))),
-                    ],
-                  ),
-                  ListTile(
-                    title: const Text('ABHA & health ID linking'),
-                    trailing: const Icon(Icons.link),
-                    onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const AbhaScreen())),
-                  ),
-                  ListTile(
-                    title: const Text('Sign out'),
-                    onTap: () async {
-                      await auth.signOut(apiBind);
-                      await load();
-                    },
-                  ),
-                ],
-              ],
-            ),
+      body: body,
       floatingActionButton: auth.isLoggedIn
           ? FloatingActionButton(
               onPressed: () => _uploadRx(apiBind),
-              child: const Icon(Icons.upload_file))
+              child: const Icon(Icons.upload_file),
+            )
           : null,
     );
   }

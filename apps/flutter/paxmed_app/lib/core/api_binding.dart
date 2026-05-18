@@ -2,15 +2,17 @@ import 'package:cookie_jar/cookie_jar.dart';
 import 'package:dio/dio.dart';
 import 'package:dio_cookie_manager/dio_cookie_manager.dart';
 import 'package:flutter/foundation.dart';
-import 'package:path_provider/path_provider.dart';
 
 import '../api/client.dart';
 import '../state/auth_state.dart';
 import '../state/settings_state.dart';
+import 'path_dirs.dart';
 
 String normalizeBaseUrl(String raw) {
   final t = raw.trim();
-  if (t.isEmpty) return 'http://10.0.2.2:3000';
+  if (t.isEmpty) {
+    return kIsWeb ? 'http://localhost:3000' : 'http://10.0.2.2:3000';
+  }
   return t.endsWith('/') ? t.substring(0, t.length - 1) : t;
 }
 
@@ -22,7 +24,7 @@ class ApiBinding extends ChangeNotifier {
   final SettingsState settings;
 
   Dio? _dio;
-  PersistCookieJar? _jar;
+  CookieJar? _jar;
   PaxMedClient? _client;
   bool ready = false;
   String? initError;
@@ -57,8 +59,14 @@ class ApiBinding extends ChangeNotifier {
   }
 
   Future<void> _ensureDio() async {
-    final dir = await getApplicationDocumentsDirectory();
-    _jar = PersistCookieJar(storage: FileStorage('${dir.path}/.ml_cookies'));
+    final CookieJar jar;
+    if (kIsWeb) {
+      jar = CookieJar();
+    } else {
+      final path = await cookieJarStoragePath();
+      jar = PersistCookieJar(storage: FileStorage(path));
+    }
+    _jar = jar;
     final base = normalizeBaseUrl(settings.baseUrl);
     _dio = Dio(
       BaseOptions(
