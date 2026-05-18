@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../app_theme.dart';
 import '../core/api_binding.dart';
 import '../state/auth_state.dart';
 import '../state/cart_state.dart';
@@ -10,6 +11,58 @@ import 'orders_screen.dart';
 import 'profile_screen.dart';
 import 'search_screen.dart';
 import 'settings_sheet.dart';
+
+class _ShellAppBarTitle extends StatelessWidget {
+  const _ShellAppBarTitle({required this.tab});
+
+  final int tab;
+
+  static const _subtitles = [
+    'Compare medicine prices',
+    'Diagnostics · lab tests',
+    'Your cart',
+    'Order history',
+    'Your profile',
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context);
+    final sub = _subtitles[tab.clamp(0, _subtitles.length - 1)];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        ShaderMask(
+          blendMode: BlendMode.srcIn,
+          shaderCallback: (bounds) => const LinearGradient(
+            colors: [PaxMedColors.primary, PaxMedColors.secondary],
+          ).createShader(Rect.fromLTWH(0, 0, bounds.width > 1 ? bounds.width : 120, 28)),
+          child: const Text(
+            'PaxMed',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: Colors.white,
+              height: 1.05,
+              letterSpacing: -0.35,
+            ),
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          sub,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: t.textTheme.labelSmall?.copyWith(
+            color: t.colorScheme.onSurfaceVariant,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+}
 
 class PaxMedShell extends StatefulWidget {
   const PaxMedShell({super.key});
@@ -29,15 +82,13 @@ class _PaxMedShellState extends State<PaxMedShell> {
     );
   }
 
-  static const _titles = ['Medicines', 'Labs', 'Cart', 'Orders', 'Profile'];
-
   @override
   Widget build(BuildContext context) {
     final cart = context.watch<CartState>();
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('PaxMed · ${_titles[_tab]}'),
+        title: _ShellAppBarTitle(tab: _tab),
         actions: [
           IconButton(onPressed: () => _openSettings(context), icon: const Icon(Icons.settings)),
           Badge(

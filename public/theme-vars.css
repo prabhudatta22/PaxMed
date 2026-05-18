@@ -1,5 +1,6 @@
 /**
  * PaxMed design tokens — shared by styles.css and landing.css
+ * Page-scoped accents: set on `<body class="app-page app-page--labs">` etc.
  */
 :root {
   color-scheme: light;
@@ -21,10 +22,13 @@
   --accent-grad-to: #14b8a6;
   --accent-dim: rgb(var(--accent-rgb) / 0.12);
   --warn: #b45309;
-  --input-bg: #ffffff;
+  /* Filled inputs (aligned with shadcn-style surfaces) */
+  --input-bg: #f3f4f6;
+  --input-border: rgb(15 23 42 / 0.12);
 
   --shadow: 0 20px 50px rgb(15 23 42 / 0.1);
-  --shadow-soft: 0 8px 20px rgb(15 23 42 / 0.06);
+  --shadow-soft: 0 8px 24px rgb(15 23 42 / 0.07);
+  --shadow-card: 0 12px 40px rgb(15 23 42 / 0.08);
   --btn-primary-shadow: 0 14px 30px rgb(var(--accent-rgb) / 0.25);
 
   --radius: 18px;
@@ -33,4 +37,8 @@
 
   --font: "Inter", system-ui, sans-serif;
   --display: "Inter", system-ui, sans-serif;
+
+  /* Decorative background washes (hero grid / glows) */
+  --bg-glow-accent: rgb(var(--accent-rgb) / 0.1);
+  --bg-glow-alt: rgb(var(--accent-alt-rgb) / 0.12);
 }
