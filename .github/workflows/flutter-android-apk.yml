@@ -1,0 +1,61 @@
+# Builds a release APK for the PaxMed Flutter app (apps/flutter/paxmed_app).
+# Without Android signing secrets, release uses the debug keystore (see android/app/build.gradle.kts).
+name: Flutter Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+    paths:
+      - "apps/flutter/paxmed_app/**"
+      - ".github/workflows/flutter-android-apk.yml"
+  pull_request:
+    paths:
+      - "apps/flutter/paxmed_app/**"
+      - ".github/workflows/flutter-android-apk.yml"
+
+concurrency:
+  group: flutter-android-apk-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/flutter/paxmed_app
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Flutter pub get
+        run: flutter pub get
+
+      - name: Precache Android tooling
+        run: flutter precache --android
+
+      - name: Build release APK
+        run: flutter build apk --release
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: paxmed-app-release-apk
+          path: apps/flutter/paxmed_app/build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
