@@ -1,0 +1,18 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "b665ef5c-e94c-45c5-a7c1-becf9c68832f"
+      }
+    },
+    "android": {
+      "package": "com.paxmed.paxmed"
+    },
+    "ios": {
+      "bundleIdentifier": "com.paxmed.paxmed",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    }
+  }
+}
