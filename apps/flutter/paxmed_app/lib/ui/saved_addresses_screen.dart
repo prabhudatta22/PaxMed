@@ -463,7 +463,7 @@ class _SavedAddressesScreenState extends State<SavedAddressesScreen> {
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    const CustomPaint(painter: _FakeMapPainter()),
+                    CustomPaint(painter: _FakeMapPainter()),
                     DecoratedBox(
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
@@ -710,6 +710,8 @@ class _AddressGridPainter extends CustomPainter {
 
 /// Soft map backdrop (placeholder; no tile fetch).
 class _FakeMapPainter extends CustomPainter {
+  const _FakeMapPainter();
+
   @override
   void paint(Canvas canvas, Size size) {
     final base = Paint()..color = const Color(0xFFEEF4F6);

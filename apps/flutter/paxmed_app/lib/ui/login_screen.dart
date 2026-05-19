@@ -158,7 +158,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       backgroundColor: _LoginPalette.bg,
       body: Stack(
         children: [
-          const Positioned.fill(child: CustomPaint(painter: _VitalGridPainter())),
+          Positioned.fill(child: CustomPaint(painter: _VitalGridPainter())),
           const Positioned.fill(child: DecoratedBox(decoration: BoxDecoration(color: Colors.transparent), child: _SoftGlow())),
           SafeArea(
             child: FadeTransition(
@@ -624,6 +624,8 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
 
 /// Grid like Tailwind `.vital-clarity-grid`, drawn at opacity in paint.
 class _VitalGridPainter extends CustomPainter {
+  const _VitalGridPainter();
+
   @override
   void paint(Canvas canvas, Size size) {
     final line = Paint()

@@ -37,6 +37,8 @@ class SearchScreen extends StatefulWidget {
 
 /// Light teal grid backdrop (same as Stitch order-history).
 class _SearchGridPainter extends CustomPainter {
+  const _SearchGridPainter();
+
   @override
   void paint(Canvas canvas, Size size) {
     const step = 48.0;
@@ -665,7 +667,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
     return Stack(
       children: [
-        const Positioned.fill(child: CustomPaint(painter: _SearchGridPainter())),
+        Positioned.fill(child: CustomPaint(painter: _SearchGridPainter())),
         RefreshIndicator(
           color: _SearchTheme.primary,
           onRefresh: () async => _runSearch(),

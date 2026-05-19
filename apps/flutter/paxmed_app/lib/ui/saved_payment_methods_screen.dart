@@ -673,7 +673,7 @@ class _SavedPaymentMethodsScreenState extends State<SavedPaymentMethodsScreen> {
       ),
       body: Stack(
         children: [
-          const Positioned.fill(child: CustomPaint(painter: _SquareGridPainter())),
+          Positioned.fill(child: CustomPaint(painter: _SquareGridPainter())),
           Column(children: [Expanded(child: inner)]),
           if (auth.isLoggedIn && !_loading && (_err ?? '').isEmpty)
             Positioned(
@@ -718,6 +718,8 @@ class _SavedPaymentMethodsScreenState extends State<SavedPaymentMethodsScreen> {
 }
 
 class _SquareGridPainter extends CustomPainter {
+  const _SquareGridPainter();
+
   @override
   void paint(Canvas canvas, Size size) {
     const step = 48.0;
