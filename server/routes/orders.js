@@ -618,11 +618,16 @@ router.get("/", async (req, res) => {
   await ensureOrdersSchema();
   const userId = req.user.id;
   const { rows } = await pool.query(
-    `SELECT id, order_kind, status, delivery_option, delivery_fee_inr, scheduled_for, provider_name, provider_order_ref, notes, created_at, updated_at
-     FROM orders
-     WHERE user_id = $1
-     ORDER BY created_at DESC
-     LIMIT 10`,
+    `SELECT o.id, o.order_kind, o.status, o.delivery_option, o.delivery_fee_inr, o.scheduled_for,
+            o.provider_name, o.provider_order_ref, o.notes, o.created_at, o.updated_at,
+            (SELECT SUM(oi.unit_price_inr * oi.quantity_units)::numeric
+               FROM order_items oi WHERE oi.order_id = o.id) AS items_total_inr,
+            (SELECT oi.item_label FROM order_items oi WHERE oi.order_id = o.id ORDER BY oi.id ASC LIMIT 1)
+               AS primary_item_label
+     FROM orders o
+     WHERE o.user_id = $1
+     ORDER BY o.created_at DESC
+     LIMIT 50`,
     [userId]
   );
   res.json({ orders: rows });

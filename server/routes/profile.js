@@ -338,6 +338,88 @@ router.delete("/addresses/:id", async (req, res) => {
   return res.json({ ok: true });
 });
 
+router.put("/addresses/:id", async (req, res) => {
+  if (!requireConsumer(req, res)) return;
+  await ensureProfileSchema();
+  const userId = consumerDbUserId(req, res);
+  if (userId == null) return;
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id) || id < 1) return res.status(400).json({ error: "Invalid address id" });
+
+  const b = req.body || {};
+  const address_line1 = cleanText(b.address_line1, 220);
+  if (!address_line1) return res.status(400).json({ error: "address_line1 is required" });
+  const isDefault = Boolean(b.is_default);
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const own = await client.query(`SELECT id, phone_e164 FROM user_addresses WHERE id = $1 AND user_id = $2 LIMIT 1`, [
+      id,
+      userId,
+    ]);
+    if (!own.rows.length) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ error: "Address not found" });
+    }
+    const prevPhone = own.rows[0].phone_e164;
+    const nextPhone =
+      Object.prototype.hasOwnProperty.call(req.body ?? {}, 'phone_e164')
+        ? cleanText(b.phone_e164, 30) || null
+        : prevPhone ?? null;
+
+    if (isDefault) {
+      await client.query(`UPDATE user_addresses SET is_default = false WHERE user_id = $1`, [userId]);
+    }
+    const { rows } = await client.query(
+      `UPDATE user_addresses SET
+         label = $3,
+         name = $4,
+         phone_e164 = $5,
+         address_line1 = $6,
+         address_line2 = $7,
+         landmark = $8,
+         city = $9,
+         state = $10,
+         pincode = $11,
+         lat = $12,
+         lng = $13,
+         is_default = $14,
+         updated_at = now()
+       WHERE id = $1 AND user_id = $2
+       RETURNING id, label, name, phone_e164, address_line1, address_line2, landmark, city, state, pincode, lat, lng, is_default, created_at`,
+      [
+        id,
+        userId,
+        cleanText(b.label, 60),
+        cleanText(b.name, 100),
+        nextPhone,
+        address_line1,
+        cleanText(b.address_line2, 220),
+        cleanText(b.landmark, 120),
+        cleanText(b.city, 80),
+        cleanText(b.state, 80),
+        cleanText(b.pincode, 12),
+        b.lat != null ? Number(b.lat) : null,
+        b.lng != null ? Number(b.lng) : null,
+        isDefault,
+      ]
+    );
+    await client.query("COMMIT");
+    try {
+      await mergeAndPushAbhaForUser(pool, userId, {});
+    } catch (e) {
+      console.warn("ABHA push after address update:", e?.message || e);
+    }
+    return res.json({ ok: true, address: rows[0] });
+  } catch (e) {
+    await client.query("ROLLBACK");
+    return res.status(500).json({ error: e?.message || "Failed to update address" });
+  } finally {
+    client.release();
+  }
+});
+
 router.post("/payment-methods", async (req, res) => {
   if (!requireConsumer(req, res)) return;
   await ensureProfileSchema();
@@ -392,6 +474,90 @@ router.post("/payment-methods", async (req, res) => {
   } catch (e) {
     await client.query("ROLLBACK");
     return res.status(500).json({ error: e?.message || "Failed to save payment method" });
+  } finally {
+    client.release();
+  }
+});
+
+router.put("/payment-methods/:id", async (req, res) => {
+  if (!requireConsumer(req, res)) return;
+  await ensureProfileSchema();
+  const userId = consumerDbUserId(req, res);
+  if (userId == null) return;
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id) || id < 1) return res.status(400).json({ error: "Invalid payment method id" });
+
+  const b = req.body || {};
+  const sel = await pool.query(`SELECT id, method_type, label, upi_id, card_last4, card_network, card_holder_name, is_default FROM user_payment_methods WHERE id = $1 AND user_id = $2`, [
+    id,
+    userId,
+  ]);
+  if (!sel.rows.length) return res.status(404).json({ error: "Payment method not found" });
+  const cur = sel.rows[0];
+
+  let label = b.label !== undefined ? cleanText(b.label, 80) : cur.label;
+  let upiId = cur.upi_id;
+  let cardLast4 = cur.card_last4;
+  let cardNetwork = cur.card_network;
+  let cardHolderName = cur.card_holder_name;
+
+  const upiRegex = /^[a-zA-Z0-9._-]{2,}@[a-zA-Z0-9.-]{2,}$/;
+
+  if (cur.method_type === "upi") {
+    if (b.upi_id !== undefined) {
+      upiId = cleanText(b.upi_id, 120);
+      if (!upiId || !upiRegex.test(upiId)) {
+        return res.status(400).json({ error: "Valid UPI ID is required (e.g. name@bank)" });
+      }
+    }
+    if (!label) label = "UPI";
+  } else if (cur.method_type === "card") {
+    if (b.card_last4 !== undefined) {
+      cardLast4 = String(b.card_last4 || "").replace(/\D/g, "").slice(-4);
+      if (!/^\d{4}$/.test(cardLast4)) {
+        return res.status(400).json({ error: "card_last4 must be 4 digits" });
+      }
+    }
+    if (b.card_network !== undefined) cardNetwork = cleanText(b.card_network, 40);
+    if (b.card_holder_name !== undefined) cardHolderName = cleanText(b.card_holder_name, 100);
+    if (!label) label = "Card";
+  } else {
+    return res.status(400).json({ error: "Unknown payment method type" });
+  }
+
+  let isDefault = cur.is_default;
+  if (b.is_default !== undefined && b.is_default !== null) {
+    isDefault = Boolean(b.is_default);
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    if (isDefault) {
+      await client.query(`UPDATE user_payment_methods SET is_default = false WHERE user_id = $1`, [userId]);
+    }
+    const { rows } = await client.query(
+      `UPDATE user_payment_methods
+       SET label = $1,
+           upi_id = $2,
+           card_last4 = $3,
+           card_network = $4,
+           card_holder_name = $5,
+           is_default = $6,
+           updated_at = now()
+       WHERE id = $7 AND user_id = $8
+       RETURNING id, method_type, provider, label, upi_id, card_last4, card_network, card_holder_name, is_default, created_at`,
+      [label, upiId, cardLast4, cardNetwork, cardHolderName, isDefault, id, userId]
+    );
+    if (!rows.length) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ error: "Payment method not found" });
+    }
+    await client.query("COMMIT");
+    return res.json({ ok: true, payment_method: rows[0] });
+  } catch (e) {
+    await client.query("ROLLBACK");
+    return res.status(500).json({ error: e?.message || "Failed to update payment method" });
   } finally {
     client.release();
   }

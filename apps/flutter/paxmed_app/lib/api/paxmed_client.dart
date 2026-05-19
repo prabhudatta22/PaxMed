@@ -143,6 +143,12 @@ class PaxMedClient {
     return _m(r.data);
   }
 
+  Future<Map<String, dynamic>> putProfileAddress(int id, Map<String, dynamic> body) async {
+    final r = await dio.put('/api/profile/addresses/$id', data: body);
+    _ensure2xx(r);
+    return _m(r.data);
+  }
+
   Future<Map<String, dynamic>> deleteProfileAddress(int id) async {
     final r = await dio.delete('/api/profile/addresses/$id');
     _ensure2xx(r);
@@ -157,6 +163,12 @@ class PaxMedClient {
 
   Future<Map<String, dynamic>> postProfilePaymentMethod(Map<String, dynamic> body) async {
     final r = await dio.post('/api/profile/payment-methods', data: body);
+    _ensure2xx(r);
+    return _m(r.data);
+  }
+
+  Future<Map<String, dynamic>> putProfilePaymentMethod(int id, Map<String, dynamic> body) async {
+    final r = await dio.put('/api/profile/payment-methods/$id', data: body);
     _ensure2xx(r);
     return _m(r.data);
   }
